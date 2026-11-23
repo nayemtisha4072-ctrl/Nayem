@@ -1,0 +1,8 @@
+{
+  "name": "Remix fb88baji - Gaming \u0026 Sports Betting Platform",
+  "description": "fb88baji is a responsive gaming and betting platform with BDT ledger wallet, bKash/Nagad/Rocket sandbox integration, live sportsbook, casino games, and audit-ready administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

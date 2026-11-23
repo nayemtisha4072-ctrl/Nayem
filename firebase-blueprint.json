@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account information, KYC status, and security profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Unique user ID" },
+        "username": { "type": "string", "maxLength": 50, "description": "Player login username" },
+        "email": { "type": "string", "format": "email", "maxLength": 120, "description": "User email address" },
+        "mobile": { "type": "string", "maxLength": 20, "description": "Bangladeshi E.164 phone number" },
+        "fullName": { "type": "string", "maxLength": 100, "description": "Player full name" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "Access control role" },
+        "kycStatus": { "type": "string", "enum": ["UNVERIFIED", "PENDING", "VERIFIED", "REJECTED"], "description": "KYC status" },
+        "isSuspended": { "type": "boolean", "description": "Account suspension status" },
+        "isSelfExcluded": { "type": "boolean", "description": "Responsible gaming exclusion" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Account creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["id", "username", "role", "kycStatus", "isSuspended", "isSelfExcluded", "createdAt", "updatedAt"]
+    },
+    "Wallet": {
+      "title": "Wallet",
+      "description": "User integer-paisa balance ledger record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128, "description": "Owner user ID" },
+        "currency": { "type": "string", "enum": ["BDT"], "description": "Currency code" },
+        "availablePaisa": { "type": "number", "description": "Playable balance in Paisa" },
+        "reservedPaisa": { "type": "number", "description": "Held balance in Paisa" },
+        "bonusPaisa": { "type": "number", "description": "Promotional bonus balance" },
+        "demoPaisa": { "type": "number", "description": "Practice credits (0 in live mode)" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Balance update timestamp" }
+      },
+      "required": ["userId", "currency", "availablePaisa", "reservedPaisa", "bonusPaisa", "updatedAt"]
+    },
+    "Deposit": {
+      "title": "Deposit",
+      "description": "Deposit transaction via bKash, Nagad, Rocket, Upay, or Bank Transfer",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Deposit transaction ID" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Depositing player user ID" },
+        "method": { "type": "string", "enum": ["bkash", "nagad", "rocket", "upay", "bank_transfer"], "description": "MFS Gateway" },
+        "amountPaisa": { "type": "number", "description": "Deposit amount in Paisa" },
+        "trxId": { "type": "string", "maxLength": 64, "description": "MFS Transaction ID" },
+        "senderNumber": { "type": "string", "maxLength": 25, "description": "Player sender number" },
+        "status": { "type": "string", "enum": ["PENDING", "PROCESSING", "SUCCEEDED", "FAILED", "REVERSED"], "description": "Deposit verification status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Submission timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Approval/Rejection timestamp" }
+      },
+      "required": ["id", "userId", "method", "amountPaisa", "trxId", "status", "createdAt", "updatedAt"]
+    },
+    "Withdrawal": {
+      "title": "Withdrawal",
+      "description": "Withdrawal payout request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Withdrawal transaction ID" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Requesting player user ID" },
+        "method": { "type": "string", "enum": ["bkash", "nagad", "rocket", "upay", "bank_transfer"], "description": "Target MFS Gateway" },
+        "amountPaisa": { "type": "number", "description": "Payout amount in Paisa" },
+        "payoutDestination": { "type": "string", "maxLength": 64, "description": "Destination MFS mobile number or bank account" },
+        "status": { "type": "string", "enum": ["REQUESTED", "UNDER_REVIEW", "APPROVED", "PAID", "REJECTED", "FAILED"], "description": "Payout status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Request timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Processing timestamp" }
+      },
+      "required": ["id", "userId", "method", "amountPaisa", "payoutDestination", "status", "createdAt", "updatedAt"]
+    },
+    "Bet": {
+      "title": "Bet",
+      "description": "Individual spin, crash flight, or sports wager",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Bet reference ID" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Player user ID" },
+        "eventId": { "type": "string", "maxLength": 128, "description": "Game or match identifier" },
+        "eventName": { "type": "string", "maxLength": 150, "description": "Display title of game or event" },
+        "stakePaisa": { "type": "number", "description": "Wagered amount in Paisa" },
+        "payoutPaisa": { "type": "number", "description": "Won amount in Paisa" },
+        "acceptedOdds": { "type": "number", "description": "Payout odds multiplier" },
+        "status": { "type": "string", "enum": ["PENDING", "WON", "LOST", "REFUNDED", "CANCELLED"], "description": "Bet outcome" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Wager placement timestamp" }
+      },
+      "required": ["id", "userId", "eventId", "stakePaisa", "status", "createdAt"]
+    },
+    "SupportTicket": {
+      "title": "SupportTicket",
+      "description": "Customer support query or complaint",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Ticket ID" },
+        "userId": { "type": "string", "maxLength": 128, "description": "Ticket creator user ID" },
+        "subject": { "type": "string", "maxLength": 120, "description": "Topic or query subject" },
+        "message": { "type": "string", "maxLength": 1000, "description": "Customer issue details" },
+        "status": { "type": "string", "enum": ["OPEN", "IN_PROGRESS", "RESOLVED"], "description": "Support status" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Resolution timestamp" }
+      },
+      "required": ["id", "userId", "subject", "message", "status", "createdAt", "updatedAt"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "description": "System broadcast news and marquee message",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128, "description": "Announcement ID" },
+        "message": { "type": "string", "maxLength": 500, "description": "Display announcement text" },
+        "active": { "type": "boolean", "description": "Whether active on site" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last updated" }
+      },
+      "required": ["id", "message", "active", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profiles indexed by UID"
+    },
+    "/wallets/{userId}": {
+      "schema": { "$ref": "#/entities/Wallet" },
+      "description": "User integer-paisa balance ledger documents"
+    },
+    "/deposits/{depositId}": {
+      "schema": { "$ref": "#/entities/Deposit" },
+      "description": "Deposit requests"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": { "$ref": "#/entities/Withdrawal" },
+      "description": "Withdrawal payout requests"
+    },
+    "/bets/{betId}": {
+      "schema": { "$ref": "#/entities/Bet" },
+      "description": "Player bets and game wagers"
+    },
+    "/supportTickets/{ticketId}": {
+      "schema": { "$ref": "#/entities/SupportTicket" },
+      "description": "User customer support tickets"
+    },
+    "/announcements/{announcementId}": {
+      "schema": { "$ref": "#/entities/Announcement" },
+      "description": "Public system notice and promotional marquee"
+    }
+  }
+}

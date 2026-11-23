@@ -1,0 +1,914 @@
+/**
+ * My Wallet Modal Component for fb88baji
+ * Displays the 5 official payment channels matching user specifications & uploaded image:
+ * 1. Bank Transfer
+ * 2. bKash
+ * 3. Nagad
+ * 4. Rocket
+ * 5. Upay
+ */
+
+import React, { useState, useEffect } from 'react';
+import {
+  X,
+  CreditCard,
+  Banknote,
+  Copy,
+  Check,
+  CheckCircle2,
+  AlertTriangle,
+  ChevronDown,
+  Upload,
+  Building2,
+  Phone,
+  Landmark,
+} from 'lucide-react';
+import {
+  User,
+  Wallet,
+  PaymentMethod,
+  Deposit,
+  Withdrawal,
+  PaymentChannel,
+} from '../types';
+import {
+  BkashLogo,
+  NagadLogo,
+  RocketLogo,
+  UpayLogo,
+  BankTransferLogo,
+} from './BrandLogos';
+import { safeApiFetch } from '../utils/api';
+
+interface WalletModalProps {
+  initialTab?: 'deposit' | 'withdraw' | 'history';
+  user: User | null;
+  wallet: Wallet | null;
+  onClose: () => void;
+  onRefreshWallet: () => void;
+  lang: 'bn' | 'en';
+}
+
+const DEFAULT_PAYMENT_CHANNELS: PaymentChannel[] = [
+  {
+    id: 'bkash',
+    name: 'bKash',
+    nameBn: 'বিকাশ',
+    type: 'mfs',
+    channelType: 'cashout',
+    badge: 'MFS',
+    accentColor: '#E2136E',
+    logoUrl: 'bkash',
+    accountNumber: '01712-888999',
+    sendMoneyNumber: '01799-112233',
+    accountName: 'FB88BAJI Official bKash',
+    minDepositPaisa: 100 * 100,
+    maxDepositPaisa: 50000 * 100,
+    minWithdrawPaisa: 500 * 100,
+    maxWithdrawPaisa: 25000 * 100,
+    bonusPercent: 5,
+    instructionBn: 'আপনার বিকাশ অ্যাপ বা *247# ডায়াল করে Cash Out অপশন দিয়ে নিচের নম্বরে টাকা পাঠান।',
+    active: true,
+    isDepositEnabled: true,
+    isWithdrawEnabled: true,
+  },
+  {
+    id: 'nagad',
+    name: 'Nagad',
+    nameBn: 'নগদ',
+    type: 'mfs',
+    channelType: 'cashout',
+    badge: 'MFS',
+    accentColor: '#ED1C24',
+    logoUrl: 'nagad',
+    accountNumber: '01912-777888',
+    sendMoneyNumber: '01988-445566',
+    accountName: 'FB88BAJI Official Nagad',
+    minDepositPaisa: 100 * 100,
+    maxDepositPaisa: 50000 * 100,
+    minWithdrawPaisa: 500 * 100,
+    maxWithdrawPaisa: 25000 * 100,
+    bonusPercent: 5,
+    instructionBn: 'আপনার নগদ অ্যাপ বা *167# ডায়াল করে Cash Out অপশন দিয়ে নিচের নম্বরে টাকা পাঠান।',
+    active: true,
+    isDepositEnabled: true,
+    isWithdrawEnabled: true,
+  },
+];
+
+export const renderChannelLogo = (channel: PaymentChannel, size: 'sm' | 'md' = 'sm') => {
+  if (channel.id === 'bkash' || channel.logoUrl === 'bkash') {
+    return <BkashLogo size={size} showText={false} />;
+  }
+  if (channel.id === 'nagad' || channel.logoUrl === 'nagad') {
+    return <NagadLogo size={size} showText={false} />;
+  }
+  if (channel.id === 'rocket' || channel.logoUrl === 'rocket') {
+    return <RocketLogo size={size} showText={false} />;
+  }
+  if (channel.id === 'upay' || channel.logoUrl === 'upay') {
+    return <UpayLogo size={size} showText={false} />;
+  }
+  if (channel.id === 'bank_transfer' || channel.type === 'bank' || channel.logoUrl === 'bank_transfer') {
+    return <BankTransferLogo size={size} showText={false} />;
+  }
+  if (channel.logoUrl && (channel.logoUrl.startsWith('http') || channel.logoUrl.startsWith('/'))) {
+    return <img src={channel.logoUrl} alt={channel.name} className="w-6 h-6 object-contain" />;
+  }
+  return <Banknote className="w-5 h-5 text-amber-400" />;
+};
+
+export const WalletModal: React.FC<WalletModalProps> = ({
+  initialTab = 'deposit',
+  user,
+  wallet,
+  onClose,
+  onRefreshWallet,
+  lang,
+}) => {
+  const [activeTab, setActiveTab] = useState<'deposit' | 'withdraw'>(
+    initialTab === 'withdraw' ? 'withdraw' : 'deposit'
+  );
+  const [channels, setChannels] = useState<PaymentChannel[]>(DEFAULT_PAYMENT_CHANNELS);
+  const [method, setMethod] = useState<string>('bkash');
+
+  const activeChannels: PaymentChannel[] = channels.filter((c) => c.active !== false);
+  const depositChannels: PaymentChannel[] = activeChannels.filter((c) => c.isDepositEnabled !== false);
+  const withdrawChannels: PaymentChannel[] = activeChannels.filter((c) => c.isWithdrawEnabled !== false);
+  const selectedChannel: PaymentChannel =
+    channels.find((c) => c.id === method) ||
+    depositChannels[0] ||
+    activeChannels[0] ||
+    DEFAULT_PAYMENT_CHANNELS[0];
+  const [promotion, setPromotion] = useState<string>('Normal');
+  const [amountTk, setAmountTk] = useState<number>(500);
+  const [senderNumber, setSenderNumber] = useState<string>(user?.mobile || '');
+  const [trxId, setTrxId] = useState<string>('');
+  const [screenshotProof, setScreenshotProof] = useState<string>('');
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [depositAccounts, setDepositAccounts] = useState<any>(null);
+
+  // Withdrawal States
+  const [payoutMobile, setPayoutMobile] = useState<string>(user?.mobile || '');
+  const [bankWithdrawName, setBankWithdrawName] = useState<string>('Dutch-Bangla Bank PLC');
+  const [bankWithdrawHolder, setBankWithdrawHolder] = useState<string>(user?.fullName || '');
+  const [bankWithdrawAcc, setBankWithdrawAcc] = useState<string>('');
+  const [bankWithdrawBranch, setBankWithdrawBranch] = useState<string>('Dhaka Main Branch');
+
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Fetch official payment channels (active only)
+  useEffect(() => {
+    safeApiFetch<{ channels: PaymentChannel[] }>('/api/v1/payments/channels')
+      .then((res) => {
+        if (res.ok && Array.isArray(res.data?.channels) && res.data.channels.length > 0) {
+          setChannels(res.data.channels);
+          if (!res.data.channels.some((c: PaymentChannel) => c.id === method)) {
+            setMethod(res.data.channels[0].id);
+          }
+        }
+      })
+      .catch(() => {});
+
+    safeApiFetch<{ accounts: Record<string, any> }>('/api/v1/payments/deposit-accounts')
+      .then((res) => {
+        if (res.ok && res.data?.accounts) {
+          setDepositAccounts(res.data.accounts);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const balanceNumber = wallet ? (wallet.availablePaisa / 100).toFixed(2) : '0.00';
+
+  // Current active official bank details
+  const officialBank = depositAccounts?.bank_transfer || {
+    bankName: 'Dutch-Bangla Bank PLC (DBBL)',
+    accountName: 'FB88BAJI OFFICIAL ENTERPRISE',
+    accountNumber: '115.120.0098765',
+    branchName: 'Motijheel Corporate Branch, Dhaka',
+    routingNumber: '090261745',
+  };
+
+  // Current active official MFS number
+  const currentMfsNumber =
+    depositAccounts?.[method]?.cashout?.number ||
+    depositAccounts?.[method]?.send_money?.number ||
+    (method === 'bkash'
+      ? '01712-888999'
+      : method === 'nagad'
+      ? '01912-777888'
+      : method === 'rocket'
+      ? '01812-555666-8'
+      : '01922-334455');
+
+  const handleCopyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      setFeedback({ type: 'error', message: 'ফাইলের সাইজ সর্বোচ্চ ১০ মেগাবাইট হতে পারে।' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setScreenshotProof(reader.result as string);
+      setFeedback(null);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleSubmitDeposit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (!trxId || trxId.trim().length < 4) {
+      setFeedback({ type: 'error', message: 'অনুগ্রহ করে সঠিক ট্রানজেকশন আইডি (TrxID) প্রদান করুন।' });
+      return;
+    }
+
+    if (!screenshotProof) {
+      setFeedback({ type: 'error', message: 'অনুগ্রহ করে পেমেন্টের স্ক্রিনশট প্রুফ (Screenshot Proof) আপলোড করুন।' });
+      return;
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const res = await safeApiFetch<{ message: string; error?: string }>('/api/v1/payments/deposits', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: user.sessionToken ? `Bearer ${user.sessionToken}` : '',
+        },
+        body: JSON.stringify({
+          method,
+          transferType: method === 'bank_transfer' ? 'bank_transfer' : 'cashout',
+          amountTk,
+          trxId: trxId.trim().toUpperCase(),
+          senderNumber: senderNumber || user.mobile,
+          screenshotProof,
+        }),
+      });
+
+      setIsSubmitting(false);
+
+      if (!res.ok) throw new Error(res.error || 'ডিপোজিট আবেদন ব্যর্থ হয়েছে');
+
+      setFeedback({
+        type: 'success',
+        message: res.data?.message || `৳${amountTk} ডিপোজিট সফলভাবে জমা হয়েছে! অ্যাডমিন ট্রানজেকশন যাচাই করে অনুমোদন দিলে ব্যালেন্স পাবেন।`,
+      });
+      setTrxId('');
+      setScreenshotProof('');
+      onRefreshWallet();
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setFeedback({ type: 'error', message: err.message });
+    }
+  };
+
+  const handleSubmitWithdrawal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    if (method === 'bank_transfer') {
+      if (!bankWithdrawAcc || bankWithdrawAcc.trim().length < 6) {
+        setFeedback({ type: 'error', message: 'অনুগ্রহ করে সঠিক ব্যাংক একাউন্ট নম্বর প্রদান করুন।' });
+        return;
+      }
+      if (!bankWithdrawHolder) {
+        setFeedback({ type: 'error', message: 'অনুগ্রহ করে একাউন্ট ধারকের নাম প্রদান করুন।' });
+        return;
+      }
+    } else {
+      const dest = payoutMobile || user.mobile;
+      if (!dest || dest.length < 10) {
+        setFeedback({ type: 'error', message: 'অনুগ্রহ করে সঠিক মোবাইল নম্বর প্রদান করুন।' });
+        return;
+      }
+    }
+
+    setIsSubmitting(true);
+    setFeedback(null);
+
+    try {
+      const payoutDest =
+        method === 'bank_transfer'
+          ? `${bankWithdrawName} - A/C: ${bankWithdrawAcc} (${bankWithdrawHolder})`
+          : payoutMobile || user.mobile;
+
+      const res = await safeApiFetch<{ message: string; error?: string }>('/api/v1/payments/withdrawals', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: user.sessionToken ? `Bearer ${user.sessionToken}` : '',
+        },
+        body: JSON.stringify({
+          method,
+          amountTk,
+          payoutDestination: payoutDest,
+          bankName: method === 'bank_transfer' ? bankWithdrawName : undefined,
+          accountHolder: method === 'bank_transfer' ? bankWithdrawHolder : undefined,
+          branchName: method === 'bank_transfer' ? bankWithdrawBranch : undefined,
+        }),
+      });
+
+      setIsSubmitting(false);
+
+      if (!res.ok) throw new Error(res.error || 'উইথড্রয়াল আবেদন ব্যর্থ হয়েছে');
+
+      setFeedback({
+        type: 'success',
+        message: res.data?.message || `৳${amountTk} উইথড্রয়াল আবেদন গৃহীত হয়েছে এবং ব্যালেন্স রিজার্ভ করা হয়েছে।`,
+      });
+      onRefreshWallet();
+    } catch (err: any) {
+      setIsSubmitting(false);
+      setFeedback({ type: 'error', message: err.message });
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-sm select-none animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg bg-[#540026] border border-[#a30048] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+        {/* Header */}
+        <div className="bg-[#ba0050] px-5 py-3.5 flex items-center justify-between border-b border-[#e00062]/40 shadow-sm shrink-0">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-black text-white tracking-wide">My wallet</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center font-bold text-xs transition cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Tab Switcher: [ Deposit ] vs [ Withdrawal ] */}
+        <div className="p-4 pb-2 shrink-0">
+          <div className="grid grid-cols-2 gap-2 bg-[#3b001a] p-1.5 rounded-2xl border border-[#780036]">
+            <button
+              onClick={() => {
+                setActiveTab('deposit');
+                setFeedback(null);
+              }}
+              className={`py-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+                activeTab === 'deposit'
+                  ? 'gold-accent-btn text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Deposit
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('withdraw');
+                setFeedback(null);
+              }}
+              className={`py-2 rounded-xl text-xs sm:text-sm font-black transition cursor-pointer ${
+                activeTab === 'withdraw'
+                  ? 'gold-accent-btn text-slate-950 shadow-md'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+            >
+              Withdrawal
+            </button>
+          </div>
+
+          {/* Subheader: Main Wallet Balance */}
+          <div className="flex items-center justify-between px-2 pt-3 pb-1 text-xs font-bold">
+            <span className="text-slate-200">Main Wallet Balance</span>
+            <span className="text-amber-400 font-mono font-black text-sm">BDT {balanceNumber}</span>
+          </div>
+        </div>
+
+        {/* Scrollable Body Content */}
+        <div className="px-4 pb-5 pt-1 space-y-3.5 overflow-y-auto no-scrollbar flex-1">
+          {/* Official Payment Channels Banner (Dynamic active channels: bKash & Nagad by default) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-amber-300 font-bold px-1">
+              <span>অফিসিয়াল পেমেন্ট চ্যানেল ({activeChannels.length}টি সক্রিয়)</span>
+              <span className="text-[10px] text-emerald-300 bg-emerald-950/70 px-2 py-0.5 rounded-full border border-emerald-500/40 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span>স্বীকৃত গেটওয়ে</span>
+              </span>
+            </div>
+            <div className="w-full bg-white rounded-2xl p-2 sm:p-2.5 shadow-md flex items-center justify-center gap-3 sm:gap-6 overflow-hidden border border-amber-400/30">
+              {activeChannels.map((c) => (
+                <div key={c.id} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="h-6 w-auto flex items-center justify-center">
+                    {renderChannelLogo(c, 'sm')}
+                  </div>
+                  <span className="text-xs font-black text-slate-800">{c.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Feedback Message */}
+          {feedback && (
+            <div
+              className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2 ${
+                feedback.type === 'success'
+                  ? 'bg-emerald-950/80 border-emerald-500/50 text-emerald-200'
+                  : 'bg-rose-950/80 border-rose-500/50 text-rose-200'
+              }`}
+            >
+              {feedback.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+              )}
+              <span>{feedback.message}</span>
+            </div>
+          )}
+
+          {activeTab === 'deposit' ? (
+            <form onSubmit={handleSubmitDeposit} className="space-y-3">
+              {/* Section 1: | Promotion */}
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <span className="w-1 h-3 rounded-full bg-amber-400" />
+                  <span className="text-xs font-bold text-white">Promotion</span>
+                  <div className="ml-auto flex items-center gap-1 text-xs text-rose-200 font-semibold cursor-pointer">
+                    <span>{promotion}</span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: | Deposit Channel */}
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-1 h-3 rounded-full bg-amber-400" />
+                  <span className="text-xs font-bold text-white">Deposit Channel</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#142922] border border-[#1e5343] text-emerald-300 font-black text-xs shadow-inner cursor-pointer"
+                  >
+                    Auto Pay
+                  </button>
+                  <button
+                    type="button"
+                    className="px-3.5 py-1.5 rounded-xl bg-[#42001c] border border-[#800038] text-rose-200 font-bold text-xs"
+                  >
+                    Direct Transfer
+                  </button>
+                </div>
+              </div>
+
+              {/* Section 3: | Payment Method (Only active channels: bKash & Nagad by default) */}
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1 h-3 rounded-full bg-amber-400" />
+                    <span className="text-xs font-bold text-white">Payment Method</span>
+                  </div>
+                  <span className="text-[10px] text-amber-300 font-bold">{depositChannels.length}টি চ্যানেল উপলব্ধ</span>
+                </div>
+
+                {/* Dynamic Payment Methods Grid */}
+                <div className={`grid gap-2 ${depositChannels.length <= 2 ? 'grid-cols-2' : depositChannels.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-5'}`}>
+                  {depositChannels.map((pm) => {
+                    const isSelected = method === pm.id;
+                    return (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => setMethod(pm.id)}
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-[#1b2725] border-amber-400 text-white shadow-lg ring-1 ring-amber-400'
+                            : 'bg-[#1b2725]/70 border-[#2f423e] text-slate-300 hover:bg-[#1b2725]'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 mb-1.5 shadow-sm shrink-0">
+                          {renderChannelLogo(pm, 'sm')}
+                        </div>
+                        <span className="text-[12px] font-black tracking-tight text-white text-center leading-tight">
+                          {pm.name}
+                        </span>
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Sub-channel pill */}
+                <div className="pt-1 flex items-center gap-2">
+                  <span className="inline-block px-3.5 py-1.5 rounded-xl bg-[#142922] border border-[#1e5343] text-emerald-300 font-black text-xs shadow-inner">
+                    {selectedChannel.name.toUpperCase()} PAYMENT
+                  </span>
+                  {selectedChannel.bonusPercent ? (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-400/20 text-amber-300 text-[10px] font-black border border-amber-400/40">
+                      +{selectedChannel.bonusPercent}% বোনাস
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+
+              {/* Section 4: Target Account Details Card */}
+              {selectedChannel.type === 'bank' ? (
+                /* Bank Transfer Official Details */
+                <div className="bg-[#42001c] border border-[#009fe3]/50 rounded-2xl p-3.5 space-y-2.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-cyan-300">
+                    <Building2 className="w-4 h-4 text-cyan-400" />
+                    <span>অফিসিয়াল ব্যাংক একাউন্ট বিবরণী (ডিপোজিট করুন):</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs bg-black/40 p-3 rounded-xl border border-[#66002d]">
+                    <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                      <span className="text-slate-400 text-[11px]">ব্যাংকের নাম:</span>
+                      <strong className="text-white font-mono">{officialBank.bankName}</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                      <span className="text-slate-400 text-[11px]">একাউন্ট নাম:</span>
+                      <strong className="text-amber-300 font-mono">{officialBank.accountName}</strong>
+                    </div>
+
+                    <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                      <span className="text-slate-400 text-[11px]">একাউন্ট নম্বর:</span>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-emerald-400 font-mono text-sm tracking-wider">
+                          {officialBank.accountNumber}
+                        </strong>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(officialBank.accountNumber, 'bank_acc')}
+                          className="px-2 py-0.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedKey === 'bank_acc' ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span>কপি হয়েছে</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>কপি</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center py-0.5 border-b border-white/5">
+                      <span className="text-slate-400 text-[11px]">ব্রাঞ্চের নাম:</span>
+                      <span className="text-slate-200">{officialBank.branchName}</span>
+                    </div>
+
+                    <div className="flex justify-between items-center py-0.5">
+                      <span className="text-slate-400 text-[11px]">রাউটিং নম্বর:</span>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-amber-300 font-mono">{officialBank.routingNumber}</strong>
+                        <button
+                          type="button"
+                          onClick={() => handleCopyText(officialBank.routingNumber, 'routing')}
+                          className="px-2 py-0.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 font-bold text-[10px] flex items-center gap-1 cursor-pointer"
+                        >
+                          {copiedKey === 'routing' ? (
+                            <>
+                              <Check className="w-3 h-3 text-emerald-400" />
+                              <span>কপি হয়েছে</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3 h-3" />
+                              <span>কপি</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-cyan-200/80 leading-relaxed">
+                    * আপনার যেকোনো ব্যাংক অ্যাপ বা ব্রাঞ্চ থেকে ফান্ড ট্রান্সফার / বিইএফটিএন / এনপিএসবি করে নিচে ট্রানজেকশন আইডি ও রসিদের ছবি আপলোড করুন।
+                  </p>
+                </div>
+              ) : (
+                /* MFS Official Numbers (bKash, Nagad, etc.) */
+                <div className="bg-[#42001c] border border-[#800038] rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-amber-400" />
+                      <span>
+                        অফিসিয়াল {selectedChannel.nameBn || selectedChannel.name} {selectedChannel.channelType === 'cashout' ? 'ক্যাশ আউট এজেন্ট' : 'পেমেন্ট'} নম্বর:
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(selectedChannel.accountNumber, 'mfs_num')}
+                      className="flex items-center gap-1 text-[11px] font-bold text-amber-300 hover:underline cursor-pointer"
+                    >
+                      {copiedKey === 'mfs_num' ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span>কপি হয়েছে</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>কপি করুন</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-[#66002d] text-center font-mono font-black text-amber-300 tracking-wider text-base">
+                    {selectedChannel.accountNumber}
+                  </div>
+
+                  {selectedChannel.sendMoneyNumber && (
+                    <div className="pt-2 border-t border-[#66002d] flex items-center justify-between text-xs">
+                      <span className="text-slate-300 text-[11px]">
+                        পার্সোনাল সেন্ড মানি নম্বর: <strong className="text-white font-mono">{selectedChannel.sendMoneyNumber}</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText(selectedChannel.sendMoneyNumber!, 'sm_num')}
+                        className="text-[10px] text-amber-300 font-bold hover:underline cursor-pointer"
+                      >
+                        {copiedKey === 'sm_num' ? 'কপি হয়েছে' : 'কপি করুন'}
+                      </button>
+                    </div>
+                  )}
+
+                  <p className="text-[10px] text-rose-200/80 text-center">
+                    {selectedChannel.instructionBn || 'ক্যাশ আউট বা সেন্ড মানি করে প্রাপ্ত TrxID এবং রসিদের স্ক্রিনশট নিচে প্রদান করুন।'}
+                  </p>
+                </div>
+              )}
+
+              {/* Section 5: Amount Presets & TrxID */}
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-white">টাকার পরিমাণ (BDT):</span>
+                  <span className="text-xs font-black font-mono text-amber-300">৳{amountTk}</span>
+                </div>
+
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[100, 200, 500, 1000, 2000, 5000, 10000, 25000].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setAmountTk(preset)}
+                      className={`py-1.5 rounded-xl text-xs font-black border transition cursor-pointer ${
+                        amountTk === preset
+                          ? 'gold-accent-btn text-slate-950 shadow-md'
+                          : 'bg-[#520024] border-[#7d0037] text-slate-200 hover:bg-[#66002d]'
+                      }`}
+                    >
+                      ৳{preset >= 1000 ? `${preset / 1000}k` : preset}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Sender Mobile / Account */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-xs font-bold text-slate-200">
+                    {method === 'bank_transfer'
+                      ? 'আপনার প্রেরক ব্যাংক ও একাউন্ট নম্বর:'
+                      : `আপনার প্রেরক ${method.toUpperCase()} নম্বর:`}
+                  </label>
+                  <input
+                    type="text"
+                    value={senderNumber}
+                    onChange={(e) => setSenderNumber(e.target.value)}
+                    placeholder={
+                      method === 'bank_transfer'
+                        ? 'e.g. City Bank - A/C 123456789'
+                        : '01XXXXXXXXX'
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white font-mono text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                  />
+                </div>
+
+                {/* TrxID */}
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-200">
+                    ট্রানজেকশন আইডি (TrxID) *
+                  </label>
+                  <input
+                    type="text"
+                    value={trxId}
+                    onChange={(e) => setTrxId(e.target.value)}
+                    placeholder="e.g. 9J8K7L6M / Bank Ref No"
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white font-mono text-xs uppercase placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                  />
+                </div>
+
+                {/* Screenshot Proof Upload */}
+                <div className="space-y-1.5 pt-1">
+                  <label className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span>পেমেন্ট স্ক্রিনশট প্রুফ (Screenshot) *</span>
+                    <span className="text-[10px] text-amber-300 font-semibold">বাধ্যতামূলক</span>
+                  </label>
+
+                  {screenshotProof ? (
+                    <div className="relative rounded-xl border border-emerald-500/50 bg-[#3b001a] p-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <img
+                          src={screenshotProof}
+                          alt="Screenshot Proof"
+                          className="w-12 h-12 object-cover rounded-lg border border-emerald-400"
+                        />
+                        <div>
+                          <div className="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>স্ক্রিনশট সফলভাবে যুক্ত হয়েছে</span>
+                          </div>
+                          <div className="text-[10px] text-slate-300">অ্যাডমিন প্যানেলে পাঠানো হবে</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setScreenshotProof('')}
+                        className="px-2 py-1 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 text-xs font-bold transition cursor-pointer"
+                      >
+                        পরিবর্তন
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center p-3 rounded-xl border-2 border-dashed border-[#940042] hover:border-amber-400 bg-[#42001c] cursor-pointer transition">
+                      <Upload className="w-5 h-5 text-amber-400 mb-1" />
+                      <span className="text-xs font-bold text-white">পেমেন্টের স্ক্রিনশট বা রসিদ আপলোড করুন</span>
+                      <span className="text-[10px] text-rose-200/70 mt-0.5">JPG, PNG বা WEBP (সর্বোচ্চ ১০MB)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-2xl gold-accent-btn font-black text-sm text-slate-950 shadow-xl transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <CreditCard className="w-4 h-4 text-slate-950" />
+                <span>{isSubmitting ? 'প্রসেসিং হচ্ছে...' : 'ডিপোজিট নিশ্চিত করুন'}</span>
+              </button>
+            </form>
+          ) : (
+            /* Withdrawal View */
+            <form onSubmit={handleSubmitWithdrawal} className="space-y-3">
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-1 h-3 rounded-full bg-amber-400" />
+                    <span className="text-xs font-bold text-white">উইথড্রয়াল মাধ্যম নির্বাচন করুন</span>
+                  </div>
+                  <span className="text-[10px] text-amber-300 font-bold">{withdrawChannels.length}টি মাধ্যম</span>
+                </div>
+
+                <div className={`grid gap-2 ${withdrawChannels.length <= 2 ? 'grid-cols-2' : withdrawChannels.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-5'}`}>
+                  {withdrawChannels.map((pm) => {
+                    const isSelected = method === pm.id;
+                    return (
+                      <button
+                        key={pm.id}
+                        type="button"
+                        onClick={() => setMethod(pm.id)}
+                        className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border transition cursor-pointer relative ${
+                          isSelected
+                            ? 'bg-[#1b2725] border-amber-400 text-white shadow-lg ring-1 ring-amber-400'
+                            : 'bg-[#1b2725]/70 border-[#2f423e] text-slate-300 hover:bg-[#1b2725]'
+                        }`}
+                      >
+                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1 mb-1.5 shadow-sm shrink-0">
+                          {renderChannelLogo(pm, 'sm')}
+                        </div>
+                        <span className="text-[12px] font-black tracking-tight text-white text-center leading-tight">
+                          {pm.name}
+                        </span>
+                        {isSelected && (
+                          <div className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Withdrawal Details Inputs */}
+              <div className="bg-[#6b002f] border border-[#940042] rounded-2xl p-3 space-y-3">
+                {method === 'bank_transfer' ? (
+                  /* Bank Withdrawal Fields */
+                  <>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200">আপনার ব্যাংকের নাম:</label>
+                      <input
+                        type="text"
+                        value={bankWithdrawName}
+                        onChange={(e) => setBankWithdrawName(e.target.value)}
+                        placeholder="e.g. Dutch-Bangla Bank / City Bank / BRAC Bank"
+                        required
+                        className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200">একাউন্ট হোল্ডারের নাম:</label>
+                      <input
+                        type="text"
+                        value={bankWithdrawHolder}
+                        onChange={(e) => setBankWithdrawHolder(e.target.value)}
+                        placeholder="e.g. Md Nayem Hossain"
+                        required
+                        className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200">ব্যাংক একাউন্ট নম্বর:</label>
+                      <input
+                        type="text"
+                        value={bankWithdrawAcc}
+                        onChange={(e) => setBankWithdrawAcc(e.target.value)}
+                        placeholder="e.g. 115.120.1234567"
+                        required
+                        className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white font-mono text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-200">ব্রাঞ্চের নাম:</label>
+                      <input
+                        type="text"
+                        value={bankWithdrawBranch}
+                        onChange={(e) => setBankWithdrawBranch(e.target.value)}
+                        placeholder="e.g. Motijheel Branch / Dhanmondi"
+                        className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                      />
+                    </div>
+                  </>
+                ) : (
+                  /* MFS Withdrawal Number */
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-200">
+                      আপনার {method.toUpperCase()} একাউন্ট নম্বর:
+                    </label>
+                    <input
+                      type="text"
+                      value={payoutMobile}
+                      onChange={(e) => setPayoutMobile(e.target.value)}
+                      placeholder="01XXXXXXXXX"
+                      required
+                      className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white font-mono text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                    />
+                  </div>
+                )}
+
+                {/* Amount */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-xs font-bold text-slate-200 flex items-center justify-between">
+                    <span>উইথড্রয়াল পরিমাণ (BDT):</span>
+                    <span className="text-[10px] text-amber-300">সীমা: ৳৫০০ - ৳২৫,০০০</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={amountTk}
+                    onChange={(e) => setAmountTk(Number(e.target.value))}
+                    min={500}
+                    max={25000}
+                    required
+                    className="w-full px-3 py-2 rounded-xl bg-[#42001c] border border-[#940042] text-white font-mono text-xs placeholder-rose-300/40 focus:outline-hidden focus:border-amber-400"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-3 rounded-2xl gold-accent-btn font-black text-sm text-slate-950 shadow-xl transition active:scale-98 cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Banknote className="w-4 h-4 text-slate-950" />
+                <span>{isSubmitting ? 'প্রসেসিং হচ্ছে...' : 'উইথড্রয়াল আবেদন সাবমিট করুন'}</span>
+              </button>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};

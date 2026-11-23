@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    font-family: 'Inter', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
+    background-color: #64002c;
+    color: #fce7f3;
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    position: relative;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% 0%, #7d0037 0%, #570026 60%, #47001f 100%);
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #47001f;
+}
+::-webkit-scrollbar-thumb {
+  background: #940042;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #ba0054;
+}
+
+/* Banglabaji Brand Palette */
+.bg-bangla-base {
+  background-color: #64002c;
+}
+.bg-bangla-deep {
+  background-color: #4a0020;
+}
+.bg-bangla-header {
+  background-color: #520024;
+}
+.bg-bangla-sidebar {
+  background-color: #88003a;
+}
+.bg-bangla-card {
+  background-color: #830037;
+}
+.bg-bangla-card-hover {
+  background-color: #990042;
+}
+.border-bangla {
+  border-color: #a30048;
+}
+
+/* 3D Glossy Category Pill Button (Matches Screenshot_6 & Screenshot_11) */
+.bangla-pill-btn {
+  background: linear-gradient(180deg, #b80050 0%, #8f003e 70%, #7a0035 100%);
+  border: 1px solid #cf005c;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.35);
+}
+.bangla-pill-btn:hover {
+  background: linear-gradient(180deg, #c70058 0%, #9e0046 70%, #85003a 100%);
+}
+.bangla-pill-btn-active {
+  background: linear-gradient(180deg, #c90059 0%, #a30048 70%, #800038 100%);
+  border: 1px solid #ff2b88;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Gold Accents (Matches Deposit button, VIP text, Banner CTA) */
+.gold-accent-btn {
+  background: linear-gradient(180deg, #f0ca64 0%, #c49c38 60%, #a88127 100%);
+  color: #121212;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+.gold-accent-btn:hover {
+  background: linear-gradient(180deg, #f7d679 0%, #d4a93e 60%, #b88d2d 100%);
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #FFC943 0%, #FFE888 100%);
+}
+.gold-gradient-text {
+  background: linear-gradient(135deg, #FFC943 0%, #FFE888 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Marquee Bar */
+.bg-bangla-marquee {
+  background: linear-gradient(90deg, #c49c33 0%, #d6ad3e 50%, #b8902d 100%);
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-flex;
+  animation: marquee 30s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Hide scrollbar */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spin-slow 16s linear infinite;
+}
+

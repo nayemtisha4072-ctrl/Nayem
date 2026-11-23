@@ -1,0 +1,284 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net (Default Deny Catch-All)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Hardened Global Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.email == 'freelancernayemyt@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 3. Entity Validation Blueprints (Anti-Update-Gap & Schema Enforcement)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['id', 'username', 'role', 'kycStatus', 'isSuspended', 'isSelfExcluded', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'username', 'email', 'mobile', 'fullName', 'role', 'kycStatus', 'isSuspended', 'isSelfExcluded', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && data.username is string && data.username.size() >= 2 && data.username.size() <= 50
+        && data.role in ['user', 'admin']
+        && data.kycStatus in ['UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED']
+        && data.isSuspended is bool
+        && data.isSelfExcluded is bool
+        && (!('email' in data) || (data.email is string && data.email.size() <= 120))
+        && (!('mobile' in data) || (data.mobile is string && data.mobile.size() <= 20))
+        && (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 100));
+    }
+
+    function isValidWallet(data) {
+      return data.keys().hasAll(['userId', 'currency', 'availablePaisa', 'reservedPaisa', 'bonusPaisa', 'updatedAt'])
+        && data.keys().hasOnly(['userId', 'currency', 'availablePaisa', 'reservedPaisa', 'bonusPaisa', 'demoPaisa', 'updatedAt'])
+        && isValidId(data.userId)
+        && data.currency == 'BDT'
+        && data.availablePaisa is number && data.availablePaisa >= 0
+        && data.reservedPaisa is number && data.reservedPaisa >= 0
+        && data.bonusPaisa is number && data.bonusPaisa >= 0
+        && (!('demoPaisa' in data) || (data.demoPaisa is number && data.demoPaisa >= 0));
+    }
+
+    function isValidDeposit(data) {
+      return data.keys().hasAll(['id', 'userId', 'method', 'amountPaisa', 'trxId', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'method', 'amountPaisa', 'trxId', 'senderNumber', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.method in ['bkash', 'nagad', 'rocket', 'upay', 'bank_transfer']
+        && data.amountPaisa is number && data.amountPaisa >= 10000 && data.amountPaisa <= 50000000
+        && data.trxId is string && data.trxId.size() >= 4 && data.trxId.size() <= 64
+        && data.status in ['PENDING', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'REVERSED']
+        && (!('senderNumber' in data) || (data.senderNumber is string && data.senderNumber.size() <= 25));
+    }
+
+    function isValidWithdrawal(data) {
+      return data.keys().hasAll(['id', 'userId', 'method', 'amountPaisa', 'payoutDestination', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'method', 'amountPaisa', 'payoutDestination', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.method in ['bkash', 'nagad', 'rocket', 'upay', 'bank_transfer']
+        && data.amountPaisa is number && data.amountPaisa >= 50000 && data.amountPaisa <= 25000000
+        && data.payoutDestination is string && data.payoutDestination.size() >= 4 && data.payoutDestination.size() <= 64
+        && data.status in ['REQUESTED', 'UNDER_REVIEW', 'APPROVED', 'PAID', 'REJECTED', 'FAILED'];
+    }
+
+    function isValidBet(data) {
+      return data.keys().hasAll(['id', 'userId', 'eventId', 'stakePaisa', 'status', 'createdAt'])
+        && data.keys().hasOnly(['id', 'userId', 'eventId', 'eventName', 'stakePaisa', 'payoutPaisa', 'acceptedOdds', 'status', 'createdAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.eventId is string && data.eventId.size() >= 1 && data.eventId.size() <= 128
+        && data.stakePaisa is number && data.stakePaisa > 0
+        && data.status in ['PENDING', 'WON', 'LOST', 'REFUNDED', 'CANCELLED']
+        && (!('eventName' in data) || (data.eventName is string && data.eventName.size() <= 150))
+        && (!('payoutPaisa' in data) || (data.payoutPaisa is number && data.payoutPaisa >= 0))
+        && (!('acceptedOdds' in data) || (data.acceptedOdds is number && data.acceptedOdds >= 0));
+    }
+
+    function isValidSupportTicket(data) {
+      return data.keys().hasAll(['id', 'userId', 'subject', 'message', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'userId', 'subject', 'message', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.id)
+        && isValidId(data.userId)
+        && data.subject is string && data.subject.size() >= 2 && data.subject.size() <= 120
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 1000
+        && data.status in ['OPEN', 'IN_PROGRESS', 'RESOLVED'];
+    }
+
+    function isValidAnnouncement(data) {
+      return data.keys().hasAll(['id', 'message', 'active', 'updatedAt'])
+        && data.keys().hasOnly(['id', 'message', 'active', 'updatedAt'])
+        && isValidId(data.id)
+        && data.message is string && data.message.size() >= 1 && data.message.size() <= 500
+        && data.active is bool;
+    }
+
+    // 4. Admins Collection (Read-only for self or admins; writes strictly disabled from client)
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if isAdmin();
+      allow write: if false;
+    }
+
+    // 5. Users Collection (PII isolated to Owner or Verified Admin; users cannot escalate role/KYC/suspension)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isVerified()
+        && isOwner(userId)
+        && isValidUserProfile(incoming())
+        && incoming().id == request.auth.uid
+        && incoming().role == 'user'
+        && incoming().kycStatus == 'UNVERIFIED'
+        && incoming().isSuspended == false
+        && incoming().isSelfExcluded == false
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidUserProfile(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().kycStatus == existing().kycStatus
+            && incoming().isSuspended == existing().isSuspended
+            && incoming().diff(existing()).affectedKeys().hasOnly(['username', 'fullName', 'mobile', 'isSelfExcluded', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 6. Wallets Collection (Owner can read own wallet; only Admin can write/adjust balances)
+    match /wallets/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId)
+        && isAdmin()
+        && isValidWallet(incoming())
+        && incoming().userId == userId
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isAdmin()
+        && isValidWallet(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 7. Deposits Collection (Terminal SUCCEEDED/FAILED/REVERSED locked except Admin)
+    match /deposits/{depositId} {
+      allow get: if isValidId(depositId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(depositId)
+        && isVerified()
+        && isValidDeposit(incoming())
+        && incoming().id == depositId
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'PENDING'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(depositId)
+        && isAdmin()
+        && isValidDeposit(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(depositId) && isAdmin();
+    }
+
+    // 8. Withdrawals Collection (Terminal PAID/REJECTED/FAILED locked; only Admin transitions payout state)
+    match /withdrawals/{withdrawalId} {
+      allow get: if isValidId(withdrawalId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(withdrawalId)
+        && isVerified()
+        && isValidWithdrawal(incoming())
+        && incoming().id == withdrawalId
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'REQUESTED'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(withdrawalId)
+        && isAdmin()
+        && isValidWithdrawal(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(withdrawalId) && isAdmin();
+    }
+
+    // 9. Bets Collection (Only Admin can create/settle via verified desk; Owners can read own bets)
+    match /bets/{betId} {
+      allow get: if isValidId(betId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(betId)
+        && isAdmin()
+        && isValidBet(incoming())
+        && incoming().id == betId
+        && incoming().createdAt == request.time;
+      allow update: if isValidId(betId)
+        && isAdmin()
+        && isValidBet(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(betId) && isAdmin();
+    }
+
+    // 10. Support Tickets Collection
+    match /supportTickets/{ticketId} {
+      allow get: if isValidId(ticketId) && isSignedIn() && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(ticketId)
+        && isVerified()
+        && isValidSupportTicket(incoming())
+        && incoming().id == ticketId
+        && incoming().userId == request.auth.uid
+        && incoming().status == 'OPEN'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(ticketId)
+        && isVerified()
+        && isValidSupportTicket(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().userId == request.auth.uid
+            && existing().status != 'RESOLVED'
+            && incoming().status == existing().status
+            && incoming().diff(existing()).affectedKeys().hasOnly(['message', 'updatedAt'])
+          )
+        );
+      allow delete: if isValidId(ticketId) && isAdmin();
+    }
+
+    // 11. Announcements Collection (Public Read, Verified Admin Write)
+    match /announcements/{announcementId} {
+      allow get: if isValidId(announcementId);
+      allow list: if true;
+      allow create, update: if isValidId(announcementId)
+        && isAdmin()
+        && isValidAnnouncement(incoming())
+        && incoming().id == announcementId
+        && incoming().updatedAt == request.time;
+      allow delete: if isValidId(announcementId) && isAdmin();
+    }
+  }
+}
