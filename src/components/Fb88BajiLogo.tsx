@@ -1,7 +1,6 @@
 /**
- * Fb88baji Official Brand Logo Component
- * - "FB" bold italic white monogram in a vibrant crimson-pink rounded badge with golden outline & crown sparkle
- * - Wordmark: "Fb88baji" with "88" in radiant gold
+ * Fb88Baji Official Brand Logo Component
+ * Emerald Green monogram badge with adaptive wordmark for Light (White Header) or Dark (Footer) surfaces.
  */
 
 import React from 'react';
@@ -10,12 +9,14 @@ interface Fb88BajiLogoProps {
   className?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showTagline?: boolean;
+  variant?: 'light' | 'dark';
 }
 
 export const Fb88BajiLogo: React.FC<Fb88BajiLogoProps> = ({
   className = '',
   size = 'md',
   showTagline = false,
+  variant = 'light',
 }) => {
   const sizeStyles = {
     xs: { icon: 'w-6 h-6 text-xs', text: 'text-sm' },
@@ -25,29 +26,36 @@ export const Fb88BajiLogo: React.FC<Fb88BajiLogoProps> = ({
     xl: { icon: 'w-12 h-12 text-lg', text: 'text-3xl' },
   }[size];
 
+  const isLight = variant === 'light';
+
   return (
     <div className={`inline-flex items-center gap-1.5 sm:gap-2 select-none whitespace-nowrap shrink-0 ${className}`}>
-      {/* FB Monogram Badge */}
+      {/* FB Emerald Monogram Badge */}
       <div
-        className={`relative ${sizeStyles.icon} rounded-xl bg-gradient-to-br from-[#e00062] via-[#b8004f] to-[#780033] border border-[#ff4797]/70 shadow-lg shadow-black/40 flex items-center justify-center font-black italic text-white tracking-tighter shrink-0 transform -skew-x-6`}
+        className={`relative ${sizeStyles.icon} rounded-xl bg-gradient-to-br from-[#2ad178] via-[#00a859] to-[#007a3d] border border-[#74e8a8] shadow-md shadow-emerald-900/20 flex items-center justify-center font-black italic text-white tracking-tighter shrink-0 transform -skew-x-6`}
       >
-        <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">FB</span>
-        {/* Golden crown sparkle */}
-        <span className="absolute -top-1.5 -right-1 text-[10px] text-amber-300">👑</span>
+        <span className="drop-shadow-[0_1px_2px_rgba(0,0,0,0.45)]">FB</span>
+        <span className="absolute -top-1.5 -right-1 text-[10px]">👑</span>
       </div>
 
       {/* Wordmark */}
       <div className="flex flex-col justify-center shrink-0">
         <div className="flex items-center whitespace-nowrap">
           <span
-            className={`font-black italic tracking-tight text-white ${sizeStyles.text} drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)]`}
+            className={`font-black italic tracking-tight ${sizeStyles.text} ${
+              isLight ? 'text-[#0c2d1d]' : 'text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]'
+            }`}
             style={{ fontFamily: "'Montserrat', 'Inter', system-ui, sans-serif" }}
           >
-            Fb<span className="text-amber-300">88</span>baji
+            Fb<span className={isLight ? 'text-[#00a859]' : 'text-amber-300'}>88</span>baji
           </span>
         </div>
         {showTagline && (
-          <span className="text-[10px] font-semibold text-amber-300/90 tracking-wider uppercase -mt-0.5 whitespace-nowrap">
+          <span
+            className={`text-[10px] font-semibold tracking-wider uppercase -mt-0.5 whitespace-nowrap ${
+              isLight ? 'text-[#059669]' : 'text-emerald-200'
+            }`}
+          >
             Official Gaming Platform
           </span>
         )}

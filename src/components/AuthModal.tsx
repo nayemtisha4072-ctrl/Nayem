@@ -228,10 +228,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       {/* 400px - 440px Modal Box matching Screenshot_14 & 15 */}
-      <div className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200 border border-rose-200">
+      <div className="relative w-full max-w-[420px] bg-white rounded-3xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200 border border-[#cde8d8]">
         
-        {/* Top Solid Magenta Header Bar (Matches Screenshot_14 & 15) */}
-        <div className="relative bg-[#ba0050] px-5 py-3.5 flex items-center justify-center text-white">
+        {/* Top Solid Emerald Header Bar */}
+        <div className="relative bg-gradient-to-r from-[#16b864] to-[#00994d] px-5 py-3.5 flex items-center justify-center text-white">
           <h2 className="text-base sm:text-lg font-black tracking-wide text-white">
             {tab === 'login' ? (lang === 'bn' ? 'লগইন' : 'Login') : (lang === 'bn' ? 'রেজিস্টার' : 'Sign Up')}
           </h2>
@@ -247,10 +247,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         {/* Modal Body: White background */}
         <div className="p-5 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto">
           
-          {/* Centered Brand Pill Badge (Matches Screenshot_14 & 15) */}
+          {/* Centered Brand Pill Badge */}
           <div className="flex justify-center pb-1">
-            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-[#4a0020] border border-[#6e0030] shadow-md">
-              <Fb88BajiLogo size="sm" />
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-[#0a4a2c] border border-[#177848] shadow-md">
+              <Fb88BajiLogo size="sm" variant="dark" />
             </div>
           </div>
 
@@ -277,11 +277,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           {/* ======================================================== */}
           {tab === 'login' && (
             <form onSubmit={handleLogin} className="space-y-4">
-              {/* Card Container with subtle pink border */}
-              <div className="p-4 rounded-2xl border border-pink-200/90 bg-white space-y-3.5 shadow-xs">
+              {/* Card Container with subtle mint border */}
+              <div className="p-4 rounded-2xl border border-[#cfe9da] bg-[#f7fcfa] space-y-3.5 shadow-xs">
                 {/* Username */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     {lang === 'bn' ? 'ইউজারনেম' : 'Username'}
                   </label>
                   <input
@@ -290,13 +290,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setLoginIdentifier(e.target.value)}
                     placeholder={lang === 'bn' ? 'আপনার ইউজারনেম লিখুন' : 'Username'}
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-pink-200 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#ba0050] focus:ring-1 focus:ring-[#ba0050] transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#cde8d8] bg-white text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#00a859] focus:ring-1 focus:ring-[#00a859] transition"
                   />
                 </div>
 
                 {/* Password */}
                 <div className="space-y-1.5">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     {lang === 'bn' ? 'পাসওয়ার্ড' : 'Password'}
                   </label>
                   <div className="relative">
@@ -306,7 +306,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder={lang === 'bn' ? 'আপনার পাসওয়ার্ড লিখুন' : 'Password'}
                       required
-                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-pink-200 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#ba0050] focus:ring-1 focus:ring-[#ba0050] transition"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-[#cde8d8] bg-white text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#00a859] focus:ring-1 focus:ring-[#00a859] transition"
                     />
                     <button
                       type="button"
@@ -341,11 +341,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 </button>
               </div>
 
-              {/* Solid Magenta Login Button (Matches Screenshot_15) */}
+              {/* Solid Emerald Login Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-[#ba0050] hover:bg-[#cf005c] active:scale-[0.99] text-white font-black text-sm shadow-md transition cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 active:scale-[0.99] text-white font-black text-sm shadow-md shadow-emerald-900/15 transition cursor-pointer disabled:opacity-50"
               >
                 {isLoading ? (lang === 'bn' ? 'লগইন হচ্ছে...' : 'Logging in...') : (lang === 'bn' ? 'লগইন করুন' : 'Login')}
               </button>
@@ -383,7 +383,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setErrorMsg(null);
                     setForgotNotice(null);
                   }}
-                  className="text-[#ba0050] font-black hover:underline cursor-pointer ml-1"
+                  className="text-[#00a859] font-black hover:underline cursor-pointer ml-1"
                 >
                   {lang === 'bn' ? 'রেজিস্টার করুন' : 'Sign Up'}
                 </button>
@@ -392,15 +392,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           )}
 
           {/* ======================================================== */}
-          {/* TAB 2: SIGN UP (Matches Screenshot_14) */}
+          {/* TAB 2: SIGN UP */}
           {/* ======================================================== */}
           {tab === 'register' && (
             <form onSubmit={handleRegister} className="space-y-4">
               {/* Section 1 Card (Username & Password with requirements) */}
-              <div className="p-4 rounded-2xl border border-pink-200/90 bg-white space-y-3 shadow-xs">
+              <div className="p-4 rounded-2xl border border-[#cfe9da] bg-[#f7fcfa] space-y-3 shadow-xs">
                 {/* Username* */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     Username*
                   </label>
                   <input
@@ -409,13 +409,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     onChange={(e) => setRegUsername(e.target.value)}
                     placeholder={lang === 'bn' ? 'ইউজারনেম দিন (৪-১৫ অক্ষর)' : 'Enter username (4-15 chars)'}
                     required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-pink-200 bg-[#f8fbff] text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#ba0050] focus:ring-1 focus:ring-[#ba0050] transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#cde8d8] bg-white text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#00a859] focus:ring-1 focus:ring-[#00a859] transition"
                   />
                 </div>
 
                 {/* Password* */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     Password*
                   </label>
                   <div className="relative">
@@ -425,7 +425,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       onChange={(e) => setRegPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
-                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-pink-200 bg-[#f8fbff] text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#ba0050] focus:ring-1 focus:ring-[#ba0050] transition"
+                      className="w-full pl-3.5 pr-10 py-2.5 rounded-xl border border-[#cde8d8] bg-white text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#00a859] focus:ring-1 focus:ring-[#00a859] transition"
                     />
                     <button
                       type="button"
@@ -486,17 +486,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               {/* Section 2 Card (Phone Number with BD flag & Refer Code) */}
-              <div className="p-4 rounded-2xl border border-pink-200/90 bg-white space-y-3 shadow-xs">
-                {/* Phone Number* (Matches Screenshot_14) */}
+              <div className="p-4 rounded-2xl border border-[#cfe9da] bg-[#f7fcfa] space-y-3 shadow-xs">
+                {/* Phone Number* */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     {lang === 'bn' ? 'ফোন নম্বর*' : 'Phone Number*'}
                   </label>
-                  <div className="flex rounded-xl overflow-hidden border border-pink-200 focus-within:border-[#ba0050] focus-within:ring-1 focus-within:ring-[#ba0050] transition">
-                    {/* BD Flag Pill in Magenta (Screenshot_14) */}
-                    <div className="bg-[#ba0050] px-3.5 py-2.5 flex items-center justify-center shrink-0">
+                  <div className="flex rounded-xl overflow-hidden border border-[#cde8d8] focus-within:border-[#00a859] focus-within:ring-1 focus-within:ring-[#00a859] transition">
+                    {/* BD Flag Pill in Emerald */}
+                    <div className="bg-[#00a859] px-3.5 py-2.5 flex items-center justify-center shrink-0">
                       {/* Bangladesh Flag graphic */}
-                      <div className="w-6 h-4 rounded-xs bg-[#006A4E] relative flex items-center justify-center shadow-xs">
+                      <div className="w-6 h-4 rounded-xs bg-[#006A4E] relative flex items-center justify-center shadow-xs border border-white/30">
                         <div className="w-2.5 h-2.5 rounded-full bg-[#F42A41]" />
                       </div>
                     </div>
@@ -513,15 +513,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         placeholder={lang === 'bn' ? '১XXXXXXXXX' : '17XXXXXXXX'}
                         maxLength={11}
                         required
-                        className="w-full px-2 py-2.5 bg-transparent text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden font-medium"
+                        className="w-full px-2 py-2.5 bg-transparent text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden font-medium"
                       />
                     </div>
                   </div>
                 </div>
 
-                {/* Refer Code (Matches Screenshot_14) */}
+                {/* Refer Code */}
                 <div className="space-y-1">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-[#182620]">
                     {lang === 'bn' ? 'রেফারেল কোড (ঐচ্ছিক)' : 'Refer Code'}
                   </label>
                   <input
@@ -529,19 +529,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     value={referCode}
                     onChange={(e) => setReferCode(e.target.value)}
                     placeholder={lang === 'bn' ? 'রেফারেল কোড থাকলে দিন' : 'Enter if you have one'}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-pink-200 bg-white text-slate-900 text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#ba0050] focus:ring-1 focus:ring-[#ba0050] transition"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#cde8d8] bg-white text-[#182620] text-sm placeholder-slate-400 focus:outline-hidden focus:border-[#00a859] focus:ring-1 focus:ring-[#00a859] transition"
                   />
                 </div>
               </div>
 
-              {/* Terms and Condition Checkbox (Matches Screenshot_14) */}
+              {/* Terms and Condition Checkbox */}
               <div className="flex items-center gap-2 pt-1 text-xs select-none">
                 <input
                   type="checkbox"
                   id="agreeTermsCheckbox"
                   checked={agreeTerms}
                   onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="w-4 h-4 rounded border-pink-300 text-[#ba0050] focus:ring-[#ba0050] accent-[#ba0050] cursor-pointer"
+                  className="w-4 h-4 rounded border-emerald-300 text-[#00a859] focus:ring-[#00a859] accent-[#00a859] cursor-pointer"
                 />
                 <label htmlFor="agreeTermsCheckbox" className="text-slate-700 cursor-pointer">
                   <span>{lang === 'bn' ? 'আমি সম্মত এবং শর্তাবলী গ্রহণ করছি ' : 'I agree and understand the '}</span>
@@ -551,18 +551,18 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       e.preventDefault();
                       if (onOpenTerms) onOpenTerms();
                     }}
-                    className="text-[#ba0050] font-bold hover:underline cursor-pointer"
+                    className="text-[#00a859] font-bold hover:underline cursor-pointer"
                   >
                     {lang === 'bn' ? 'ব্যবহারের শর্তাবলী' : 'Terms and Condition'}
                   </button>
                 </label>
               </div>
 
-              {/* Solid Magenta Submit Button (Matches Screenshot_14) */}
+              {/* Solid Emerald Submit Button */}
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full py-3 rounded-xl bg-[#ba0050] hover:bg-[#cf005c] active:scale-[0.99] text-white font-black text-sm shadow-md transition cursor-pointer disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 active:scale-[0.99] text-white font-black text-sm shadow-md shadow-emerald-900/15 transition cursor-pointer disabled:opacity-50"
               >
                 {isLoading
                   ? (lang === 'bn' ? 'অ্যাকাউন্ট তৈরি হচ্ছে...' : 'Submitting...')
@@ -601,7 +601,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     setTab('login');
                     setErrorMsg(null);
                   }}
-                  className="text-[#ba0050] font-black hover:underline cursor-pointer ml-1"
+                  className="text-[#00a859] font-black hover:underline cursor-pointer ml-1"
                 >
                   {lang === 'bn' ? 'লগইন করুন' : 'Login'}
                 </button>

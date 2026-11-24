@@ -3,8 +3,8 @@
 @layer base {
   html, body {
     font-family: 'Inter', 'Noto Sans Bengali', system-ui, -apple-system, sans-serif;
-    background-color: #64002c;
-    color: #fce7f3;
+    background-color: #f2f9f5;
+    color: #182620;
     width: 100%;
     max-width: 100vw;
     overflow-x: hidden;
@@ -17,7 +17,7 @@
     max-width: 100vw;
     overflow-x: hidden;
     min-height: 100vh;
-    background: radial-gradient(circle at 50% 0%, #7d0037 0%, #570026 60%, #47001f 100%);
+    background: linear-gradient(180deg, #effaf4 0%, #f6fbf8 45%, #ffffff 100%);
   }
 }
 
@@ -27,76 +27,88 @@
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #47001f;
+  background: #eaf6ef;
 }
 ::-webkit-scrollbar-thumb {
-  background: #940042;
+  background: #9ddcb9;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #ba0054;
+  background: #00a859;
 }
 
-/* Banglabaji Brand Palette */
+/* Mint & Emerald Green Palette Helpers */
 .bg-bangla-base {
-  background-color: #64002c;
+  background-color: #f2f9f5;
 }
 .bg-bangla-deep {
-  background-color: #4a0020;
+  background-color: #e4f5ec;
 }
 .bg-bangla-header {
-  background-color: #520024;
+  background-color: #ffffff;
 }
 .bg-bangla-sidebar {
-  background-color: #88003a;
+  background-color: #ffffff;
 }
 .bg-bangla-card {
-  background-color: #830037;
+  background-color: #ffffff;
 }
 .bg-bangla-card-hover {
-  background-color: #990042;
+  background-color: #f4fbf7;
 }
 .border-bangla {
-  border-color: #a30048;
+  border-color: #dceee3;
 }
 
-/* 3D Glossy Category Pill Button (Matches Screenshot_6 & Screenshot_11) */
+/* Crisp Emerald Category Pill Buttons */
 .bangla-pill-btn {
-  background: linear-gradient(180deg, #b80050 0%, #8f003e 70%, #7a0035 100%);
-  border: 1px solid #cf005c;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.35);
+  background: linear-gradient(180deg, #ffffff 0%, #f4fbf7 100%);
+  border: 1px solid #d5ecdf;
+  color: #182620;
+  box-shadow: 0 2px 6px rgba(0, 168, 89, 0.08);
 }
 .bangla-pill-btn:hover {
-  background: linear-gradient(180deg, #c70058 0%, #9e0046 70%, #85003a 100%);
+  background: linear-gradient(180deg, #f4fbf7 0%, #e7f7ee 100%);
+  border-color: #8dd9b0;
 }
 .bangla-pill-btn-active {
-  background: linear-gradient(180deg, #c90059 0%, #a30048 70%, #800038 100%);
-  border: 1px solid #ff2b88;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 4px 10px rgba(0, 0, 0, 0.5);
+  background: linear-gradient(180deg, #19c36e 0%, #00a859 65%, #008f4a 100%);
+  border: 1px solid #00a859;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 168, 89, 0.28);
 }
 
-/* Gold Accents (Matches Deposit button, VIP text, Banner CTA) */
+/* Primary Emerald & Gold Action Buttons */
+.emerald-accent-btn {
+  background: linear-gradient(180deg, #19c36e 0%, #00a859 65%, #008f4a 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 168, 89, 0.26);
+}
+.emerald-accent-btn:hover {
+  background: linear-gradient(180deg, #21cf78 0%, #05b562 65%, #00994f 100%);
+}
+
 .gold-accent-btn {
-  background: linear-gradient(180deg, #f0ca64 0%, #c49c38 60%, #a88127 100%);
-  color: #121212;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 2px 5px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(180deg, #19c36e 0%, #00a859 65%, #008f4a 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(0, 168, 89, 0.28);
 }
 .gold-accent-btn:hover {
-  background: linear-gradient(180deg, #f7d679 0%, #d4a93e 60%, #b88d2d 100%);
+  background: linear-gradient(180deg, #21cf78 0%, #05b562 65%, #00994f 100%);
 }
 
 .gold-gradient {
-  background: linear-gradient(135deg, #FFC943 0%, #FFE888 100%);
+  background: linear-gradient(135deg, #19c36e 0%, #00a859 100%);
 }
 .gold-gradient-text {
-  background: linear-gradient(135deg, #FFC943 0%, #FFE888 100%);
+  background: linear-gradient(135deg, #00a859 0%, #059669 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Marquee Bar */
+/* Announcement Mint Strip */
 .bg-bangla-marquee {
-  background: linear-gradient(90deg, #c49c33 0%, #d6ad3e 50%, #b8902d 100%);
+  background: linear-gradient(90deg, #e2f7eb 0%, #ebf9f1 50%, #e2f7eb 100%);
 }
 
 @keyframes marquee {
@@ -129,4 +141,3 @@
 .animate-spin-slow {
   animation: spin-slow 16s linear infinite;
 }
-

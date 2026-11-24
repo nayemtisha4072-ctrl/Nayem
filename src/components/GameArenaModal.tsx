@@ -88,7 +88,11 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
         if (!res.ok) {
           setSessionError(data.error || 'Failed to start external game session');
         } else {
-          setLaunchUrl(game.realLaunchUrl || data.launchUrl || '');
+          const resolvedUrl = data.launchUrl || game.realLaunchUrl || '';
+          setLaunchUrl(resolvedUrl);
+          if (!resolvedUrl && data.externalLaunchError) {
+            setSessionError(data.externalLaunchError);
+          }
         }
       } catch (err: any) {
         if (isMounted) {
@@ -108,26 +112,26 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
   // Strict Authentication Guard
   if (!user) {
     return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-        <div className="w-full max-w-md bg-[#240010] border border-amber-400/60 rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-2xl relative">
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="w-full max-w-md bg-white border border-[#cde8d8] rounded-3xl p-6 sm:p-8 text-center space-y-5 shadow-2xl relative">
           <button
             type="button"
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition cursor-pointer"
+            className="absolute top-4 right-4 p-2 rounded-full bg-[#eaf8f0] hover:bg-[#d5f2e1] text-[#059669] transition cursor-pointer"
             aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
 
-          <div className="w-16 h-16 rounded-full bg-amber-400/20 border-2 border-amber-400 mx-auto flex items-center justify-center text-amber-300 shadow-lg">
+          <div className="w-16 h-16 rounded-full bg-[#eaf8f0] border-2 border-[#00a859] mx-auto flex items-center justify-center text-[#00a859] shadow-sm">
             <Lock className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
-            <h3 className="text-xl font-black text-white">
+            <h3 className="text-xl font-black text-[#182620]">
               {lang === 'bn' ? 'সাইন আপ ও লগইন আবশ্যক' : 'Sign Up & Login Required'}
             </h3>
-            <p className="text-xs sm:text-sm text-rose-200/90 leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#4a6b5a] leading-relaxed">
               {lang === 'bn'
                 ? 'গেম খেলতে ও আসল বাজি ধরতে অনুগ্রহ করে প্রথমে সাইন আপ করে লগইন করুন।'
                 : 'Please sign up or log in to launch games.'}
@@ -138,14 +142,14 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
             <button
               type="button"
               onClick={() => onOpenAuth?.('register')}
-              className="flex-1 py-3 rounded-xl gold-accent-btn font-black text-slate-950 text-xs shadow-lg active:scale-95 transition cursor-pointer"
+              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] font-black text-white text-xs shadow-md active:scale-95 transition cursor-pointer"
             >
               {lang === 'bn' ? 'রেজিস্ট্রেশন করুন' : 'Register Now'}
             </button>
             <button
               type="button"
               onClick={() => onOpenAuth?.('login')}
-              className="flex-1 py-3 rounded-xl bg-[#6e0030] hover:bg-[#8f003e] border border-[#a30048] font-bold text-white text-xs shadow-lg active:scale-95 transition cursor-pointer"
+              className="flex-1 py-3 rounded-xl bg-[#f4fbf7] hover:bg-[#eaf8f0] border border-[#bde6cf] font-bold text-[#059669] text-xs shadow-2xs active:scale-95 transition cursor-pointer"
             >
               {lang === 'bn' ? 'লগইন করুন' : 'Log In'}
             </button>
@@ -194,27 +198,27 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
             <img
               src={game.thumbnail}
               alt={game.title}
-              className="w-28 h-28 sm:w-32 sm:h-32 -mt-12 rounded-2xl object-cover border-2 border-[#e50934]/80 shadow-2xl bg-[#111]"
+              className="w-28 h-28 sm:w-32 sm:h-32 -mt-12 rounded-2xl object-cover border-2 border-[#00a859]/80 shadow-2xl bg-[#111]"
             />
             <div className="pt-0.5 min-w-0">
-              <div className="text-lg sm:text-xl font-bold text-slate-800 leading-tight">
+              <div className="text-lg sm:text-xl font-bold text-[#182620] leading-tight">
                 {game.provider || 'Crash Live'}
               </div>
-              <div className="text-sm sm:text-base font-medium text-slate-500 mt-0.5">
+              <div className="text-sm sm:text-base font-medium text-[#4a6b5a] mt-0.5">
                 {game.title}
               </div>
-              <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <div className="mt-2 inline-flex items-center gap-1 text-[11px] font-semibold text-[#059669] bg-[#eaf8f0] border border-[#bce6ce] px-2 py-0.5 rounded-full">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#00a859]" />
                 <span>Real-Time Multiplayer • BDT</span>
               </div>
             </div>
           </div>
 
-          {/* Full-Width Bright Blue "Play" Button (Exact Match to Screenshot 1) */}
+          {/* Full-Width Bright Emerald "Play" Button */}
           <button
             type="button"
             onClick={() => setAviatorLaunched(true)}
-            className="w-full py-3.5 rounded-xl bg-[#007bff] hover:bg-[#0069d9] active:scale-[0.99] text-white font-bold text-base sm:text-lg shadow-md transition cursor-pointer"
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 active:scale-[0.99] text-white font-bold text-base sm:text-lg shadow-md shadow-emerald-900/15 transition cursor-pointer"
           >
             Play
           </button>
@@ -270,6 +274,19 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
               )}
             </div>
 
+            {launchUrl && (
+              <a
+                href={launchUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                title={lang === 'bn' ? 'নতুন ট্যাবে খুলুন' : 'Open in New Tab'}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{lang === 'bn' ? 'নতুন ট্যাব' : 'New Tab'}</span>
+              </a>
+            )}
+
             <button
               type="button"
               onClick={toggleFullscreen}
@@ -307,8 +324,8 @@ export const GameArenaModal: React.FC<GameArenaModalProps> = ({
               <p className="text-xs text-zinc-400 leading-relaxed">
                 {sessionError ||
                   (lang === 'bn'
-                    ? 'এই গেমটির জন্য অ্যাডমিন প্যানেল থেকে বৈধ প্রোভাইডার Launch URL / API সংযোগ কনফিগার করুন।'
-                    : 'Configure a valid external provider Launch URL or API endpoint in the Admin Portal.')}
+                    ? 'এই গেমটির জন্য লাইভ প্রোভাইডার Launch URL / API সংযোগ কনফিগার করা প্রয়োজন।'
+                    : 'A valid external provider Launch URL or API endpoint is required to launch this game.')}
               </p>
             </div>
           ) : (

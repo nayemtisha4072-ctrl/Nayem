@@ -29,7 +29,10 @@ import {
   ShieldCheck,
   ShieldAlert,
   Sparkles,
+  ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Clock,
   RefreshCw,
   Zap,
 } from 'lucide-react';
@@ -54,6 +57,22 @@ import { MobileBottomNav } from './components/MobileBottomNav';
 import { ResponsibleGamingModal } from './components/ResponsibleGamingModal';
 import { SupportModal } from './components/SupportModal';
 import { PolicyModal, PolicySection } from './components/PolicyModal';
+import { ReferralModal } from './components/ReferralModal';
+import {
+  RewardHubModal,
+  RescueFundModal,
+  DailySignInModal,
+  BonusReceivingModal,
+  LoginRewardsPopupModal,
+  PromoCodeModal,
+  SuggestionModal,
+  AvatarPickerModal,
+  ActivityOverviewData,
+} from './components/ActivityHubModals';
+import promoDepositBanner from './assets/images/promo_deposit_emerald_1795513858968.jpg';
+import promoVipBanner from './assets/images/promo_vip_emerald_1795513857101.jpg';
+import promoInviteBanner from './assets/images/promo_invite_emerald_1795513857378.jpg';
+import heroEmeraldBanner from './assets/images/emerald_hero_banner_1795513857403.jpg';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, handleFirestoreError, OperationType, testFirestoreConnection } from './firebase';
@@ -140,6 +159,18 @@ export default function App() {
     open: false,
     section: '18plus',
   });
+  const [activityOverview, setActivityOverview] = useState<ActivityOverviewData | null>(null);
+  const [rewardHubOpen, setRewardHubOpen] = useState(false);
+  const [rescueFundOpen, setRescueFundOpen] = useState(false);
+  const [dailySignInOpen, setDailySignInOpen] = useState(false);
+  const [bonusCenterOpen, setBonusCenterOpen] = useState(false);
+  const [loginRewardsPopupOpen, setLoginRewardsPopupOpen] = useState(false);
+  const [promoCodeOpen, setPromoCodeOpen] = useState(false);
+  const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [referralModalOpen, setReferralModalOpen] = useState(false);
+  const [promoCategoryFilter, setPromoCategoryFilter] = useState<'all' | 'bonus' | 'vip' | 'referral'>('all');
+  const [expandedPromoId, setExpandedPromoId] = useState<string | null>(null);
 
   // URL Route and Key listener for Admin Portal vs Main Site navigation
   useEffect(() => {
@@ -202,6 +233,15 @@ export default function App() {
           if (data.user && data.user.role === 'user') {
             setUser(data.user);
             fetchWallet(savedToken);
+            fetchActivityOverview(savedToken);
+            try {
+              if (!sessionStorage.getItem('fb88_rewards_popup_shown')) {
+                sessionStorage.setItem('fb88_rewards_popup_shown', '1');
+                setLoginRewardsPopupOpen(true);
+              }
+            } catch {
+              setLoginRewardsPopupOpen(true);
+            }
           } else {
             localStorage.removeItem('fb88_user_token');
           }
@@ -327,10 +367,33 @@ export default function App() {
     }
   };
 
+  const fetchActivityOverview = async (token?: string) => {
+    const t = token || user?.sessionToken;
+    if (!t) {
+      setActivityOverview(null);
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/activity/overview', {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
+        const data = await res.json();
+        setActivityOverview(data);
+      }
+    } catch {
+      // ignore network error
+    }
+  };
+
   // Real-Time Balance Synchronization
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setActivityOverview(null);
+      return;
+    }
     fetchWallet();
+    fetchActivityOverview(user.sessionToken);
 
     const pollInterval = setInterval(() => {
       fetchWallet();
@@ -339,12 +402,14 @@ export default function App() {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'fb88_wallet_refresh' || e.key === 'deposit_approved') {
         fetchWallet();
+        fetchActivityOverview();
       }
     };
     window.addEventListener('storage', handleStorageChange);
 
     const handleCustomDepositEvent = () => {
       fetchWallet();
+      fetchActivityOverview();
     };
     window.addEventListener('deposit_approved', handleCustomDepositEvent);
 
@@ -358,9 +423,11 @@ export default function App() {
   const handleLogout = () => {
     try {
       localStorage.removeItem('fb88_user_token');
+      sessionStorage.removeItem('fb88_rewards_popup_shown');
     } catch (e) {
       // ignore
     }
+    setLoginRewardsPopupOpen(false);
     setUser(null);
     setWallet(null);
   };
@@ -453,8 +520,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#64002c] text-rose-50 flex flex-col font-sans selection:bg-amber-400 selection:text-slate-950">
-      {/* Top Header (Matches Screenshot_6 & Screenshot_7) */}
+    <div className="min-h-screen w-full max-w-[100vw] overflow-x-hidden bg-[#f2f9f5] text-[#182620] flex flex-col font-sans selection:bg-[#00a859] selection:text-white">
+      {/* Top Header */}
       <Header
         user={user}
         wallet={wallet}
@@ -472,6 +539,7 @@ export default function App() {
           setPersonalCenterInitialTab(tab);
           setPersonalCenterModalOpen(true);
         }}
+        onOpenBonus={() => setBonusCenterOpen(true)}
         onOpenLedger={() => {}}
         onLogout={handleLogout}
         onRefreshWallet={() => fetchWallet()}
@@ -484,7 +552,7 @@ export default function App() {
 
       {/* Main Workspace Layout */}
       <div className="flex-1 flex w-full max-w-full overflow-x-hidden min-h-0">
-        {/* Sidebar (Matches Screenshot_6 & Screenshot_10) */}
+        {/* Sidebar & White Slide-Out Drawer */}
         <Sidebar
           currentTab={currentTab}
           setCurrentTab={setCurrentTab}
@@ -492,6 +560,23 @@ export default function App() {
           mobileOpen={mobileMenuOpen}
           setMobileOpen={setMobileMenuOpen}
           userRole={user?.role}
+          user={user}
+          wallet={wallet}
+          onOpenAuth={(tab) => setAuthModal({ open: true, tab })}
+          onOpenWallet={(tab) => setWalletModal({ open: true, tab })}
+          onOpenPersonalCenter={(tab = 'account') => {
+            setPersonalCenterInitialTab(tab);
+            setPersonalCenterModalOpen(true);
+          }}
+          onOpenRewardHub={() => {
+            if (!user) {
+              setAuthModal({ open: true, tab: 'login' });
+            } else {
+              setRewardHubOpen(true);
+            }
+          }}
+          onOpenSupport={() => setSupportModalOpen(true)}
+          onLogout={handleLogout}
           lang={lang}
           setLang={setLang}
         />
@@ -511,88 +596,245 @@ export default function App() {
             />
           )}
 
-          {/* TAB: PROMOTIONS */}
+          {/* TAB: PROMOTIONS (Mint/White Screenshot 5 Layout) */}
           {currentTab === 'promotions' && (
-            <div className="space-y-6">
-              <div className="p-6 rounded-3xl bg-[#800038] border border-[#a30048] text-white space-y-2 shadow-xl">
-                <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-xs font-black">
-                  PROMOTIONS
-                </span>
-                <h2 className="text-2xl font-black">
-                  {lang === 'bn' ? 'আকর্ষণীয় বোনাস ও ক্যাশব্যাক অফার' : 'Exclusive Promotions & Bonuses'}
-                </h2>
-                <p className="text-xs text-rose-100 max-w-xl">
-                  {lang === 'bn'
-                    ? 'প্রতিটি ডিপোজিটে ক্যাশব্যাক, নতুন মেম্বারদের জন্য ১০০% ওয়েলকাম বোনাস এবং বন্ধুদের রেফার করে ১০% রেফার বোনাস।'
-                    : 'Instant reload bonuses, weekly VIP cashback, and first deposit matching.'}
-                </p>
+            <div className="space-y-4">
+              {/* Top < PROMOTION Title Bar */}
+              <div className="flex items-center justify-between bg-white border border-[#dceee3] rounded-2xl px-3.5 py-2.5 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setCurrentTab('hot')}
+                  className="w-8 h-8 rounded-full bg-[#e3f5eb] hover:bg-[#cdebd9] text-[#00a859] flex items-center justify-center cursor-pointer transition"
+                  aria-label="Back to Home"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <h2 className="text-sm sm:text-base font-black tracking-wider text-[#182620]">PROMOTION</h2>
+                <span className="w-8" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Top Filter Tabs */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                {(
+                  [
+                    { id: 'all', label: 'All' },
+                    { id: 'bonus', label: 'Welcome & Bonus' },
+                    { id: 'vip', label: 'VIP & Cashback' },
+                    { id: 'referral', label: 'Invite & Spin' },
+                  ] as const
+                ).map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setPromoCategoryFilter(cat.id)}
+                    className={`min-h-[38px] px-4 py-1.5 rounded-xl text-xs font-black transition whitespace-nowrap cursor-pointer ${
+                      promoCategoryFilter === cat.id
+                        ? 'bg-[#00a859] text-white shadow-sm'
+                        : 'bg-white text-[#182620] border border-[#dceee3] hover:bg-[#eaf8f0]'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Promotion Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[
                   {
-                    titleBn: '১০০% ওয়েলকাম বোনাস',
-                    titleEn: '100% Welcome Bonus',
-                    amount: '৳১০,০০০ পর্যন্ত',
-                    reqBn: 'নূন্যতম ডিপোজিট ৳৫০০ • ১০x রোলওভার',
-                    reqEn: 'Min deposit ৳500 • 10x Rollover',
-                    tag: 'NEW MEMBER',
-                    color: 'from-[#800038] to-[#4d0022]',
+                    id: 'reg_19',
+                    cat: 'bonus',
+                    titleBn: '৳১৯ ফ্রি বোনাস রেজিস্ট্রেশনেই পাবেন...',
+                    highlight: '৳১৯ ফ্রি',
+                    subHighlight: 'উত্তোলন ৳৩০০ পর্যন্ত',
+                    date: '2026/08/24-Long term',
+                    detailsBn: 'নতুন সদস্য হিসেবে একাউন্ট খোলার পর বোনাস সেন্টার ও প্রোমো কোড থেকে ফ্রি বোনাস ক্লেইম করুন।',
+                    action: 'bonus' as const,
+                    badge: 'FREE',
+                    bannerImg: promoDepositBanner,
                   },
                   {
-                    titleBn: '১০% রেফার বোনাস',
-                    titleEn: '10% Referral Bonus',
-                    amount: 'আনলিমিটেড আর্নিং',
-                    reqBn: 'বন্ধুকে রেফার করে জিতে নিন ১০% রেফারেল কমিশন',
-                    reqEn: 'Invite friends and earn 10% cash commission',
-                    tag: 'REFERRAL',
-                    color: 'from-[#a30048] to-[#590027]',
+                    id: 'app_59',
+                    cat: 'bonus',
+                    titleBn: 'FB88 APP বোনাস ৳৫৯ ডাউনলোড করুন...',
+                    highlight: 'APP বোনাস ৫৯',
+                    subHighlight: 'মোবাইল অ্যাপ ডাউনলোড অফার',
+                    date: '2026/08/24-Long term',
+                    detailsBn: 'হোম স্ক্রিনে অ্যাপ ইনস্টল করুন এবং প্রোমো কোড বা বোনাস সেন্টার থেকে রিওয়ার্ড গ্রহণ করুন।',
+                    action: 'promo_code' as const,
+                    badge: 'APP',
+                    bannerImg: heroEmeraldBanner,
                   },
                   {
-                    titleBn: '১.২% সাপ্তাহিক স্পোর্টস ক্যাশব্যাক',
-                    titleEn: '1.2% Sports Cashback',
-                    amount: 'আনলিমিটেড ক্যাশব্যাক',
-                    reqBn: 'প্রতি সোমবার স্বয়ংক্রিয়ভাবে ওয়ালেটে জমা হয়',
-                    reqEn: 'Auto-credited to wallet every Monday',
-                    tag: 'CASHBACK',
-                    color: 'from-[#820038] to-[#3d001a]',
+                    id: 'first_deposit_299',
+                    cat: 'bonus',
+                    titleBn: 'নতুন সদস্যদের প্রথম জমা বোনাস সর্বোচ্চ ২৯৯...',
+                    highlight: 'সর্বোচ্চ ২৯৯% / ৳২৯৯',
+                    subHighlight: 'প্রথম ডিপোজিটে তাৎক্ষণিক বোনাস',
+                    date: '2026/08/24-Long term',
+                    detailsBn: 'প্রথমবার ন্যূনতম ৳২০০ ডিপোজিট করলে স্বয়ংক্রিয় বোনাস এবং দৈনিক রিওয়ার্ড সুবিধা খুলে যাবে।',
+                    action: 'deposit_or_register' as const,
+                    badge: '1ST DEPOSIT',
+                    bannerImg: promoDepositBanner,
                   },
-                ].map((promo, idx) => (
-                  <div
-                    key={idx}
-                    className={`p-6 rounded-3xl bg-gradient-to-br ${promo.color} border border-[#ba0054]/50 shadow-xl space-y-4 flex flex-col justify-between`}
-                  >
-                    <div className="space-y-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-[10px] font-extrabold uppercase">
-                        {promo.tag}
-                      </span>
-                      <h3 className="text-lg font-black text-white">
-                        {lang === 'bn' ? promo.titleBn : promo.titleEn}
-                      </h3>
-                      <div className="text-xl font-extrabold text-amber-300 font-mono">
-                        {promo.amount}
-                      </div>
-                      <p className="text-xs text-rose-200">
-                        {lang === 'bn' ? promo.reqBn : promo.reqEn}
-                      </p>
-                    </div>
+                  {
+                    id: 'golden_egg',
+                    cat: 'bonus',
+                    titleBn: 'সোনার ডিম ভাঙতে প্রতিদিন লগইন করুন ৯,৯৯৯,৯৯৯...',
+                    highlight: '৯,৯৯৯,৯৯৯ জিতুন',
+                    subHighlight: 'Smash & Win Golden Egg',
+                    date: '2026/08/25-Long term',
+                    detailsBn: 'প্রতিদিন লগইন করে ও রিচার্জ টার্গেট পূরণ করে Smash & Win ভাউচার দিয়ে সোনার ডিম ভাঙুন।',
+                    action: 'bonus' as const,
+                    badge: 'SMASH',
+                    bannerImg: heroEmeraldBanner,
+                  },
+                  {
+                    id: 'invite_1999',
+                    cat: 'referral',
+                    titleBn: '১ জনকে আমন্ত্রণ করুন পান ৳১,৯৯৯ সহজেই লাখপতি হন...',
+                    highlight: '৳১,৯৯৯ + ৳৩৯,৮৮৮',
+                    subHighlight: '৩-স্তর আজীবন রেফারেল কমিশন',
+                    date: '2026/08/25-Long term',
+                    detailsBn: 'আপনার কিউআর কোড বা রেফারেল লিঙ্ক শেয়ার করে প্রতিটি ভ্যালিড রেফারেলে কমিশন ও মাইলস্টোন বোনাস পান।',
+                    action: 'invite' as const,
+                    badge: 'INVITE',
+                    bannerImg: promoInviteBanner,
+                  },
+                  {
+                    id: 'vip_4_benefits',
+                    cat: 'vip',
+                    titleBn: 'FB88 VIP উপভোগ করুন ৪ টি সুবিধা বোনাস...',
+                    highlight: 'VIP ৪টি সুবিধা',
+                    subHighlight: 'উচ্চতর উত্তোলন সীমা ও সাপ্তাহিক বোনাস',
+                    date: '2026/08/25-Long term',
+                    detailsBn: 'টার্নওভার বাড়ার সাথে সাথে স্বয়ংক্রিয়ভাবে VIP লেভেল উন্নত হয় ও বিশেষ বোনাস আনলক হয়।',
+                    action: 'reward_hub' as const,
+                    badge: 'VIP',
+                    bannerImg: promoVipBanner,
+                  },
+                  {
+                    id: 'rebate_3pct',
+                    cat: 'vip',
+                    titleBn: 'রিয়েল-টাইম বেটিং রিবেট ৩% পর্যন্ত & রেসকিউ ফান্ড...',
+                    highlight: '৩% - ৮% ক্যাশব্যাক',
+                    subHighlight: 'রিয়েল-টাইম রিবেট ও রেসকিউ ফান্ড',
+                    date: '2026/08/25-Long term',
+                    detailsBn: 'দৈনিক নেট লস ৳২০০+ হলে রেসকিউ ফান্ড থেকে তাৎক্ষণিক ২% থেকে ৮% পর্যন্ত ক্যাশব্যাক ক্লেইম করুন।',
+                    action: 'rescue' as const,
+                    badge: 'REBATE',
+                    bannerImg: promoVipBanner,
+                  },
+                  {
+                    id: 'red_envelope_12',
+                    cat: 'bonus',
+                    titleBn: 'ভাগ্যবান লাল খাম বৃষ্টি প্রতিদিন ১২ বার...',
+                    highlight: 'প্রতিদিন ১২ বার',
+                    subHighlight: 'লাকি লাল খাম ও বোনাস ভাউচার',
+                    date: '2026/08/25-Long term',
+                    detailsBn: 'অ্যাক্টিভ খেলোয়াড়দের জন্য বোনাস সেন্টারে প্রতিদিন ১২ বার পর্যন্ত লাল খাম ও স্পিন পুরস্কার।',
+                    action: 'bonus' as const,
+                    badge: 'LUCKY',
+                    bannerImg: promoInviteBanner,
+                  },
+                ]
+                  .filter((p) => promoCategoryFilter === 'all' || p.cat === promoCategoryFilter)
+                  .map((promo) => {
+                    const isExpanded = expandedPromoId === promo.id;
+                    const handlePromoClick = () => {
+                      if (!user) {
+                        setAuthModal({ open: true, tab: 'register' });
+                        return;
+                      }
+                      if (promo.action === 'bonus') setBonusCenterOpen(true);
+                      else if (promo.action === 'promo_code') setPromoCodeOpen(true);
+                      else if (promo.action === 'invite') setReferralModalOpen(true);
+                      else if (promo.action === 'reward_hub') setRewardHubOpen(true);
+                      else if (promo.action === 'rescue') setRescueFundOpen(true);
+                      else if (promo.action === 'deposit_or_register') setWalletModal({ open: true, tab: 'deposit' });
+                    };
 
-                    <button
-                      onClick={() => {
-                        if (!user) {
-                          setAuthModal({ open: true, tab: 'register' });
-                        } else {
-                          setWalletModal({ open: true, tab: 'deposit' });
-                        }
-                      }}
-                      className="w-full py-2.5 rounded-full gold-accent-btn font-black text-xs shadow hover:brightness-110 transition cursor-pointer"
-                    >
-                      {!user
-                        ? (lang === 'bn' ? 'সাইন আপ করে ক্লেইম করুন' : 'Sign Up to Claim')
-                        : (lang === 'bn' ? 'অফারটি ক্লেইম করুন' : 'Claim Bonus')}
-                    </button>
-                  </div>
-                ))}
+                    return (
+                      <div
+                        key={promo.id}
+                        className="bg-white rounded-2xl overflow-hidden shadow-xs border border-[#dceee3] text-[#182620] flex flex-col justify-between hover:border-[#00a859]/50 transition"
+                      >
+                        <div className="p-3.5 space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="text-sm font-black text-[#182620] truncate">{promo.titleBn}</h3>
+                            <button
+                              type="button"
+                              onClick={() => setExpandedPromoId(isExpanded ? null : promo.id)}
+                              className="px-2.5 py-1 rounded-full bg-[#eaf8f0] border border-[#cde8d8] text-[#00a859] text-[11px] font-bold flex items-center gap-1 shrink-0 cursor-pointer hover:bg-[#d8f3e3] transition"
+                              aria-label="Toggle details"
+                            >
+                              <span>Details</span>
+                              <ChevronDown
+                                className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                              />
+                            </button>
+                          </div>
+
+                          {/* Emerald Artwork Banner */}
+                          <button
+                            type="button"
+                            onClick={handlePromoClick}
+                            className="w-full text-left rounded-xl overflow-hidden relative cursor-pointer group border border-[#dceee3] block"
+                          >
+                            <img
+                              src={promo.bannerImg}
+                              alt={promo.highlight}
+                              className="w-full h-32 sm:h-36 object-cover group-hover:scale-[1.02] transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-r from-[#064e2b]/85 via-[#064e2b]/45 to-transparent p-3.5 flex flex-col justify-center">
+                              <span className="inline-block self-start px-2 py-0.5 rounded-md bg-[#00a859] text-white text-[10px] font-black tracking-wider shadow-xs">
+                                FB88 • {promo.badge}
+                              </span>
+                              <div className="text-lg font-black text-white leading-tight mt-1.5 drop-shadow">
+                                {promo.highlight}
+                              </div>
+                              <div className="text-[11px] font-semibold text-emerald-100 mt-0.5 drop-shadow">
+                                {promo.subHighlight}
+                              </div>
+                            </div>
+                          </button>
+
+                          {isExpanded && (
+                            <div className="p-3 rounded-xl bg-[#f4fbf7] border border-[#cde8d8] text-xs text-[#182620] space-y-2.5">
+                              <p className="text-[#557063] leading-relaxed">{promo.detailsBn}</p>
+                              <button
+                                type="button"
+                                onClick={handlePromoClick}
+                                className="w-full py-2 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 text-white font-bold text-xs cursor-pointer shadow-xs transition"
+                              >
+                                {!user
+                                  ? lang === 'bn'
+                                    ? 'সাইন আপ করে অংশগ্রহণ করুন'
+                                    : 'Sign Up to Join'
+                                  : lang === 'bn'
+                                  ? 'এখনই সংগ্রহ করুন'
+                                  : 'Claim / Open Now'}
+                              </button>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-[11px] text-[#557063] pt-0.5">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="w-3.5 h-3.5 text-[#00a859]" />
+                              <span>{promo.date}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handlePromoClick}
+                              className="text-[#00a859] font-bold hover:underline cursor-pointer"
+                            >
+                              {lang === 'bn' ? 'অফার নিন →' : 'Join →'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
               </div>
             </div>
           )}
@@ -621,8 +863,7 @@ export default function App() {
                     if (!user) {
                       setAuthModal({ open: true, tab: 'register' });
                     } else {
-                      setPersonalCenterInitialTab('invite');
-                      setPersonalCenterModalOpen(true);
+                      setReferralModalOpen(true);
                     }
                   }
                 }}
@@ -646,33 +887,33 @@ export default function App() {
                 />
               )}
 
-              {/* Section Header: | HOT / | SLOTS (Matches Screenshot_6) */}
+              {/* Section Header: | HOT / | SLOTS */}
               <div className="flex items-center justify-between pt-2">
                 <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-4 rounded-full bg-[#ff2b88]" />
-                  <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
+                  <span className="w-1.5 h-4 rounded-full bg-[#00a859]" />
+                  <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#182620]">
                     {categoryTitle}
                   </h2>
                 </div>
 
                 {/* Search Bar */}
                 <div className="relative w-48 sm:w-64">
-                  <Search className="w-3.5 h-3.5 text-rose-300/60 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <Search className="w-3.5 h-3.5 text-[#557063] absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search games..."
-                    className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-[#520024] border border-[#800038] text-white text-xs placeholder-rose-300/50 focus:outline-hidden focus:border-amber-400"
+                    className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-white border border-[#cde8d8] text-[#182620] text-xs placeholder-[#8ea89a] focus:outline-hidden focus:border-[#00a859] shadow-xs"
                   />
                 </div>
               </div>
 
-              {/* Games Grid (Matches Screenshot_6) */}
+              {/* Games Grid */}
               {filteredGames.length === 0 ? (
                 searchQuery.trim() !== '' ? (
-                  <div className="p-12 text-center bg-[#540026] rounded-3xl border border-[#800038] text-rose-200 space-y-2">
-                    <Gamepad2 className="w-10 h-10 mx-auto text-rose-300/40" />
+                  <div className="p-12 text-center bg-white rounded-3xl border border-[#dceee3] text-[#557063] space-y-2 shadow-xs">
+                    <Gamepad2 className="w-10 h-10 mx-auto text-[#8ea89a]" />
                     <p className="text-xs">
                       {lang === 'bn'
                         ? `"${searchQuery}" এর সাথে কোনো গেম খুঁজে পাওয়া যায়নি।`
@@ -680,15 +921,15 @@ export default function App() {
                     </p>
                   </div>
                 ) : (
-                  <div className="my-6 p-8 text-center bg-[#540026]/90 backdrop-blur-md rounded-3xl border border-amber-400/40 text-rose-100 shadow-xl space-y-4 max-w-lg mx-auto">
-                    <Gamepad2 className="w-10 h-10 mx-auto text-amber-400" />
-                    <h3 className="text-base font-bold text-white">
+                  <div className="my-6 p-8 text-center bg-white rounded-3xl border border-[#cde8d8] text-[#182620] shadow-sm space-y-4 max-w-lg mx-auto">
+                    <Gamepad2 className="w-10 h-10 mx-auto text-[#00a859]" />
+                    <h3 className="text-base font-bold text-[#182620]">
                       {lang === 'bn' ? 'এই ক্যাটাগরিতে এখনো কোনো API গেম যুক্ত হয়নি' : 'No API games added in this category yet'}
                     </h3>
-                    <p className="text-xs text-rose-200/80 leading-relaxed">
+                    <p className="text-xs text-[#557063] leading-relaxed">
                       {lang === 'bn'
-                        ? 'অ্যাডমিন প্যানেল থেকে অনলাইন API সংযুক্ত করে রিয়েল গেম যোগ করা যাবে। এখনই লাইভ অ্যাভিয়েটর ক্র্যাশ গেম খেলতে HOT বা CRASH ট্যাবে যান।'
-                        : 'Add real games via Online API in the Admin Portal, or play Live Aviator Crash under HOT / CRASH.'}
+                        ? 'এই ক্যাটাগরিতে এখনো কোনো লাইভ API গেম যুক্ত হয়নি। এখনই লাইভ অ্যাভিয়েটর ক্র্যাশ গেম খেলতে HOT বা CRASH ট্যাবে যান।'
+                        : 'No external API games are live in this category yet. Play Live Aviator Crash under HOT / CRASH.'}
                     </p>
                     <button
                       onClick={() => {
@@ -697,7 +938,7 @@ export default function App() {
                         setProviderFilter('all');
                         setSearchQuery('');
                       }}
-                      className="px-6 py-2.5 rounded-xl gold-gradient text-slate-950 font-black text-xs cursor-pointer shadow hover:brightness-110 active:scale-95"
+                      className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-black text-xs cursor-pointer shadow hover:brightness-105 active:scale-95 transition"
                     >
                       {lang === 'bn' ? 'লাইভ ক্র্যাশ গেম দেখুন (Aviator)' : 'Go to Live Aviator'}
                     </button>
@@ -726,10 +967,6 @@ export default function App() {
         onOpenResponsibleGaming={() => setPolicyModal({ open: true, section: 'responsible' })}
         onOpenPolicy={(sec) => setPolicyModal({ open: true, section: sec })}
         onOpenTab={setCurrentTab}
-        onOpenAdmin={() => {
-          setIsAdminPortalOpen(true);
-          window.location.hash = 'admin';
-        }}
         lang={lang}
       />
 
@@ -737,8 +974,11 @@ export default function App() {
       <FloatingWidgets
         onOpenSupport={() => setSupportModalOpen(true)}
         onOpenReward={() => {
-          setPersonalCenterInitialTab('reward');
-          setPersonalCenterModalOpen(true);
+          if (!user) {
+            setAuthModal({ open: true, tab: 'login' });
+          } else {
+            setRewardHubOpen(true);
+          }
         }}
       />
 
@@ -747,11 +987,6 @@ export default function App() {
         currentTab={currentTab}
         setCurrentTab={setCurrentTab}
         isLoggedIn={!!user}
-        onOpenDeposit={() => {
-          if (user) {
-            setWalletModal({ open: true, tab: 'deposit' });
-          }
-        }}
         onOpenProfile={() => {
           if (!user) {
             setAuthModal({ open: true, tab: 'login' });
@@ -761,6 +996,20 @@ export default function App() {
           }
         }}
         onOpenAuth={(tab) => setAuthModal({ open: true, tab })}
+        onOpenInvite={() => {
+          if (!user) {
+            setAuthModal({ open: true, tab: 'register' });
+          } else {
+            setReferralModalOpen(true);
+          }
+        }}
+        onOpenReward={() => {
+          if (!user) {
+            setAuthModal({ open: true, tab: 'login' });
+          } else {
+            setRewardHubOpen(true);
+          }
+        }}
         lang={lang}
       />
 
@@ -772,14 +1021,13 @@ export default function App() {
           onUserUpdate={(updatedUser) => setUser(updatedUser)}
           onLogout={handleLogout}
           onOpenVip={() => {
-            setPersonalCenterInitialTab('reward');
-            setPersonalCenterModalOpen(true);
+            setRewardHubOpen(true);
           }}
           onOpenSupport={() => setSupportModalOpen(true)}
         />
       )}
 
-      {/* Personal Center Modal (Matches Screenshot_7 records, statements, referral) */}
+      {/* Personal Center / MEMBER Modal */}
       {personalCenterModalOpen && (
         <PersonalCenterModal
           user={user}
@@ -787,13 +1035,20 @@ export default function App() {
           initialTab={personalCenterInitialTab}
           onClose={() => setPersonalCenterModalOpen(false)}
           onRefreshWallet={() => {
-            if (user?.sessionToken) fetchWallet(user.sessionToken);
+            if (user?.sessionToken) {
+              fetchWallet(user.sessionToken);
+              fetchActivityOverview(user.sessionToken);
+            }
           }}
           onUserUpdate={(updatedUser) => setUser(updatedUser)}
           onUnreadCountChange={setUnreadCount}
           onLogout={handleLogout}
           onOpenDeposit={() => setWalletModal({ open: true, tab: 'deposit' })}
           onOpenWithdrawal={() => setWalletModal({ open: true, tab: 'withdraw' })}
+          onOpenReferral={() => setReferralModalOpen(true)}
+          onOpenAvatarPicker={() => setAvatarPickerOpen(true)}
+          onOpenSupport={() => setSupportModalOpen(true)}
+          onOpenBonus={() => setBonusCenterOpen(true)}
           lang={lang}
         />
       )}
@@ -807,11 +1062,14 @@ export default function App() {
           onSuccess={(u, token) => {
             try {
               localStorage.setItem('fb88_user_token', token);
+              sessionStorage.setItem('fb88_rewards_popup_shown', '1');
             } catch (e) {
               // ignore
             }
             setUser(u);
             fetchWallet(token);
+            fetchActivityOverview(token);
+            setLoginRewardsPopupOpen(true);
           }}
           onOpenTerms={() => setPolicyModal({ open: true, section: 'terms' })}
           lang={lang}
@@ -886,19 +1144,138 @@ export default function App() {
         />
       )}
 
+      {/* Invite Friends / Affiliate Program Modal */}
+      {referralModalOpen && (
+        <ReferralModal
+          user={user}
+          wallet={wallet}
+          isOpen={referralModalOpen}
+          onClose={() => setReferralModalOpen(false)}
+          onRefreshWallet={() => {
+            if (user?.sessionToken) {
+              fetchWallet(user.sessionToken);
+              fetchActivityOverview(user.sessionToken);
+            }
+          }}
+          onRequireAuth={() => setAuthModal({ open: true, tab: 'register' })}
+          lang={lang}
+        />
+      )}
+
+      {/* Activity & Rewards Modals */}
+      {user && rewardHubOpen && (
+        <RewardHubModal
+          user={user}
+          wallet={wallet}
+          overview={activityOverview}
+          onClose={() => setRewardHubOpen(false)}
+          onRefresh={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+          onUserUpdate={(updated) => setUser(updated)}
+          onOpenBonus={() => setBonusCenterOpen(true)}
+          onOpenSignIn={() => setDailySignInOpen(true)}
+          onOpenRescue={() => setRescueFundOpen(true)}
+          onOpenInvite={() => setReferralModalOpen(true)}
+          onOpenPromoCode={() => setPromoCodeOpen(true)}
+          onOpenAvatarPicker={() => setAvatarPickerOpen(true)}
+          onOpenVipBenefits={() => {
+            setPersonalCenterInitialTab('reward');
+            setPersonalCenterModalOpen(true);
+          }}
+        />
+      )}
+
+      {user && dailySignInOpen && (
+        <DailySignInModal
+          user={user}
+          wallet={wallet}
+          overview={activityOverview}
+          onClose={() => setDailySignInOpen(false)}
+          onCheckedIn={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+          onOpenDeposit={() => setWalletModal({ open: true, tab: 'deposit' })}
+        />
+      )}
+
+      {user && rescueFundOpen && (
+        <RescueFundModal
+          user={user}
+          overview={activityOverview}
+          onClose={() => setRescueFundOpen(false)}
+          onClaimed={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+        />
+      )}
+
+      {user && bonusCenterOpen && (
+        <BonusReceivingModal
+          user={user}
+          wallet={wallet}
+          overview={activityOverview}
+          onClose={() => setBonusCenterOpen(false)}
+          onClaimed={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+          onOpenDeposit={() => setWalletModal({ open: true, tab: 'deposit' })}
+        />
+      )}
+
+      {user && loginRewardsPopupOpen && (
+        <LoginRewardsPopupModal
+          user={user}
+          overview={activityOverview}
+          onClose={() => setLoginRewardsPopupOpen(false)}
+          onClaimed={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+          onOpenDeposit={() => setWalletModal({ open: true, tab: 'deposit' })}
+        />
+      )}
+
+      {user && promoCodeOpen && (
+        <PromoCodeModal
+          user={user}
+          onClose={() => setPromoCodeOpen(false)}
+          onRedeemed={() => {
+            fetchWallet(user.sessionToken);
+            fetchActivityOverview(user.sessionToken);
+          }}
+        />
+      )}
+
+      {user && suggestionOpen && (
+        <SuggestionModal user={user} onClose={() => setSuggestionOpen(false)} />
+      )}
+
+      {user && avatarPickerOpen && (
+        <AvatarPickerModal
+          user={user}
+          onClose={() => setAvatarPickerOpen(false)}
+          onUserUpdate={(updated) => setUser(updated)}
+        />
+      )}
+
       {/* Balance Credit Toast */}
       {balanceCreditNotice && (
-        <div className="fixed bottom-20 lg:bottom-6 left-4 z-60 p-4 rounded-2xl bg-[#520024] border-2 border-amber-400 text-white shadow-2xl animate-in slide-in-from-bottom-5 duration-300 flex items-center gap-3 max-w-sm">
-          <div className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center font-bold text-lg shrink-0">
+        <div className="fixed bottom-20 lg:bottom-6 left-4 z-60 p-4 rounded-2xl bg-white border-2 border-[#00a859] text-[#182620] shadow-2xl animate-in slide-in-from-bottom-5 duration-300 flex items-center gap-3 max-w-sm">
+          <div className="w-9 h-9 rounded-xl bg-[#eaf8f0] text-[#00a859] flex items-center justify-center font-bold text-lg shrink-0">
             ✓
           </div>
           <div className="text-xs">
-            <div className="font-black text-amber-300">ডিপোজিট ব্যালেন্স যুক্ত হয়েছে!</div>
-            <div className="text-rose-100 mt-0.5">{balanceCreditNotice}</div>
+            <div className="font-black text-[#00a859]">ডিপোজিট ব্যালেন্স যুক্ত হয়েছে!</div>
+            <div className="text-[#557063] mt-0.5">{balanceCreditNotice}</div>
           </div>
           <button
             onClick={() => setBalanceCreditNotice(null)}
-            className="text-rose-300 hover:text-white text-xs p-1 ml-auto"
+            className="text-[#557063] hover:text-[#182620] text-xs p-1 ml-auto cursor-pointer"
           >
             ✕
           </button>

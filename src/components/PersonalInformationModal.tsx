@@ -99,16 +99,16 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm select-none animate-in fade-in duration-150">
-      <div className="relative w-full max-w-sm sm:max-w-md bg-[#540026] border border-[#a30048] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
-        {/* Header (Matches Screenshot_8) */}
-        <div className="bg-[#c20054] px-5 py-3.5 flex items-center justify-between border-b border-[#e00062]/40 shadow-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm select-none animate-in fade-in duration-150">
+      <div className="relative w-full max-w-sm sm:max-w-md bg-[#f4fbf7] border border-[#cde8d8] rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-150">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-[#16b864] to-[#00994d] px-5 py-3.5 flex items-center justify-between border-b border-emerald-400/30 shadow-sm">
           <h2 className="text-sm sm:text-base font-black text-white tracking-wide">
             Personal Information
           </h2>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center font-bold text-xs transition cursor-pointer"
+            className="w-7 h-7 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center font-bold text-xs transition cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -116,26 +116,26 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
 
         {/* Content Body */}
         <div className="p-4 sm:p-5 space-y-3.5 max-h-[80vh] overflow-y-auto no-scrollbar">
-          {/* User Banner (Matches Screenshot_8) */}
+          {/* User Banner */}
           <div className="text-center space-y-1">
-            <div className="text-base font-black text-white tracking-tight">
+            <div className="text-base font-black text-[#182620] tracking-tight">
               {user?.username || 'Player'}
             </div>
-            <div className="inline-block px-4 py-0.5 rounded-full bg-[#8c8050] text-[#121212] font-black text-xs uppercase tracking-wider shadow-sm">
-              {user?.vipLevel || 'Normal'}
+            <div className="inline-block px-4 py-0.5 rounded-full bg-[#10b965] text-white font-black text-xs uppercase tracking-wider shadow-xs">
+              {user?.vipLevel || 'Default'}
             </div>
-            <div className="text-[11px] text-slate-300 font-semibold pt-0.5">
+            <div className="text-[11px] text-[#517261] font-semibold pt-0.5">
               Date Registered : {registeredDate}
             </div>
           </div>
 
-          {/* VIP Card (Matches Screenshot_8) */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#800038] border border-[#b80050] shadow-md">
+          {/* VIP Card */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#eaf8f0] border border-[#bfe6cf] shadow-xs">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-amber-400/20 border border-amber-400/50 flex items-center justify-center text-amber-300">
+              <div className="w-8 h-8 rounded-xl bg-white border border-[#cce9d8] flex items-center justify-center text-amber-500 shadow-2xs">
                 <Crown className="w-4 h-4" />
               </div>
-              <span className="text-xl font-black text-amber-300 font-mono">{vipPoints}</span>
+              <span className="text-xl font-black text-[#00a859] font-mono">{vipPoints}</span>
             </div>
             <button
               type="button"
@@ -143,7 +143,7 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                 onClose();
                 if (onOpenVip) onOpenVip();
               }}
-              className="px-3 py-1 rounded-full gold-accent-btn font-black text-xs shadow cursor-pointer hover:brightness-110"
+              className="px-3 py-1 rounded-full bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-black text-xs shadow cursor-pointer hover:brightness-105"
             >
               My VIP &gt;&gt;
             </button>
@@ -153,8 +153,8 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
             <div
               className={`p-2.5 rounded-xl text-xs font-bold flex items-center gap-2 ${
                 feedback.type === 'success'
-                  ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300'
-                  : 'bg-rose-500/20 border border-rose-500/40 text-rose-300'
+                  ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                  : 'bg-rose-50 border border-rose-200 text-rose-700'
               }`}
             >
               {feedback.type === 'success' && <Check className="w-3.5 h-3.5 shrink-0" />}
@@ -162,10 +162,10 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
             </div>
           )}
 
-          {/* Verification Alert Banner (Matches Screenshot_8) */}
-          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#1a2542] border border-[#2b3d6e] text-xs text-slate-200">
+          {/* Verification Alert Banner */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-[#eef6ff] border border-[#cbe2fc] text-xs text-slate-700">
             <div className="flex items-start gap-2">
-              <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+              <Info className="w-4 h-4 text-sky-600 shrink-0 mt-0.5" />
               <span className="leading-snug">
                 Please complete the verification below before you proceed with the withdrawal request.
               </span>
@@ -173,21 +173,21 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
             <ChevronUp className="w-4 h-4 text-slate-400 shrink-0 ml-2" />
           </div>
 
-          {/* Form Card (Matches Screenshot_8) */}
-          <div className="bg-[#730030] border border-[#a30048] rounded-2xl p-4 space-y-3.5 shadow-md">
+          {/* Form Card */}
+          <div className="bg-white border border-[#dceee3] rounded-2xl p-4 space-y-3.5 shadow-xs">
             {/* Full Name */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5 text-slate-200 font-bold">
-                <UserIcon className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2.5 text-[#182620] font-bold">
+                <UserIcon className="w-4 h-4 text-[#00a859]" />
                 <span>Full Name</span>
               </div>
               {user?.fullName ? (
-                <span className="font-bold text-white">{user.fullName}</span>
+                <span className="font-bold text-[#182620]">{user.fullName}</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => setEditingField('name')}
-                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#ba0050] to-[#e00062] hover:brightness-110 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
+                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
                 >
                   Add
                 </button>
@@ -201,34 +201,34 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter full name"
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#42001c] border border-[#940042] text-xs text-white"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#f8fcfa] border border-[#cde8d8] text-xs text-[#182620]"
                 />
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveField('name')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-[#00a859] text-white font-black text-xs disabled:opacity-50"
                 >
                   {saving ? '...' : 'Save'}
                 </button>
               </div>
             )}
 
-            <div className="border-t border-[#8f003e]/60" />
+            <div className="border-t border-[#ebf5ef]" />
 
             {/* Birthday */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5 text-slate-200 font-bold">
-                <Cake className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2.5 text-[#182620] font-bold">
+                <Cake className="w-4 h-4 text-[#00a859]" />
                 <span>Birthday</span>
               </div>
               {user?.birthday ? (
-                <span className="font-bold text-white">{user.birthday}</span>
+                <span className="font-bold text-[#182620]">{user.birthday}</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => setEditingField('birthday')}
-                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#ba0050] to-[#e00062] hover:brightness-110 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
+                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
                 >
                   Add
                 </button>
@@ -241,45 +241,45 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                   type="date"
                   value={birthday}
                   onChange={(e) => setBirthday(e.target.value)}
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#42001c] border border-[#940042] text-xs text-white"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#f8fcfa] border border-[#cde8d8] text-xs text-[#182620]"
                 />
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveField('birthday')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-[#00a859] text-white font-black text-xs disabled:opacity-50"
                 >
                   {saving ? '...' : 'Save'}
                 </button>
               </div>
             )}
 
-            <div className="border-t border-[#8f003e]/60" />
+            <div className="border-t border-[#ebf5ef]" />
 
             {/* Phone Number */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5 text-slate-200 font-bold">
-                <Phone className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2.5 text-[#182620] font-bold">
+                <Phone className="w-4 h-4 text-[#00a859]" />
                 <span>Phone Number</span>
               </div>
-              <span className="font-mono font-bold text-white">{phone}</span>
+              <span className="font-mono font-bold text-[#182620]">{phone}</span>
             </div>
 
-            <div className="border-t border-[#8f003e]/60" />
+            <div className="border-t border-[#ebf5ef]" />
 
             {/* Email */}
             <div className="flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2.5 text-slate-200 font-bold">
-                <Mail className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-2.5 text-[#182620] font-bold">
+                <Mail className="w-4 h-4 text-[#00a859]" />
                 <span>Email</span>
               </div>
               {user?.email ? (
-                <span className="font-bold text-white">{user.email}</span>
+                <span className="font-bold text-[#182620]">{user.email}</span>
               ) : (
                 <button
                   type="button"
                   onClick={() => setEditingField('email')}
-                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#ba0050] to-[#e00062] hover:brightness-110 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
+                  className="px-4 py-1 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] hover:brightness-105 text-white font-black text-xs shadow cursor-pointer transition active:scale-95"
                 >
                   Add
                 </button>
@@ -293,13 +293,13 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
-                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#42001c] border border-[#940042] text-xs text-white"
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-[#f8fcfa] border border-[#cde8d8] text-xs text-[#182620]"
                 />
                 <button
                   type="button"
                   disabled={saving}
                   onClick={() => handleSaveField('email')}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500 text-slate-950 font-black text-xs disabled:opacity-50"
+                  className="px-3 py-1.5 rounded-xl bg-[#00a859] text-white font-black text-xs disabled:opacity-50"
                 >
                   {saving ? '...' : 'Save'}
                 </button>
@@ -307,10 +307,10 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
             )}
           </div>
 
-          {/* Security Disclaimer with Headset Icon (Matches Screenshot_8) */}
-          <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-[#42001c] border border-[#800038] text-[11px] text-rose-200">
-            <div className="w-7 h-7 rounded-full bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
-              <Headphones className="w-4 h-4 text-amber-300" />
+          {/* Security Disclaimer with Headset Icon */}
+          <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-white border border-[#dceee3] text-[11px] text-[#4a6b5a]">
+            <div className="w-7 h-7 rounded-full bg-[#e6f9ef] flex items-center justify-center shrink-0 mt-0.5">
+              <Headphones className="w-4 h-4 text-[#00a859]" />
             </div>
             <p className="leading-snug">
               For privacy and security, Information can't modified after confirmation. Please{' '}
@@ -320,7 +320,7 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                   onClose();
                   if (onOpenSupport) onOpenSupport();
                 }}
-                className="text-amber-300 font-bold underline cursor-pointer"
+                className="text-[#00a859] font-bold underline cursor-pointer"
               >
                 contact customer service
               </button>
@@ -337,7 +337,7 @@ export const PersonalInformationModal: React.FC<PersonalInformationModalProps> =
                   onClose();
                   onLogout();
                 }}
-                className="w-full py-3 rounded-2xl bg-gradient-to-r from-rose-700 to-red-600 hover:from-rose-600 hover:to-red-500 text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 cursor-pointer transition active:scale-95"
+                className="w-full py-3 rounded-2xl bg-[#ef1a1a] hover:bg-[#d91414] text-white font-black text-xs shadow-lg flex items-center justify-center gap-2 cursor-pointer transition active:scale-95"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Log out (লগআউট করুন)</span>

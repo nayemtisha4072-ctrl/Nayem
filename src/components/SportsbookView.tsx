@@ -162,16 +162,16 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Sports Navigation & Filter */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#750035] p-3 sm:p-4 rounded-2xl border border-[#940042]">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-3 sm:p-4 rounded-2xl border border-[#dceee3] shadow-xs">
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full sm:w-auto touch-pan-x pb-1 sm:pb-0">
           {(['all', 'cricket', 'football', 'tennis'] as const).map((sport) => (
             <button
               key={sport}
               onClick={() => setSelectedSport(sport)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold capitalize transition cursor-pointer ${
                 selectedSport === sport
-                  ? 'gold-gradient text-slate-950 shadow'
-                  : 'bg-[#61002a] hover:bg-[#47001f] text-slate-300'
+                  ? 'bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white shadow'
+                  : 'bg-[#f4fbf7] hover:bg-[#eaf8f0] text-[#182620] border border-[#dceee3]'
               }`}
             >
               {sport === 'all'
@@ -190,20 +190,20 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setActiveTab('fixtures')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === 'fixtures'
-                ? 'bg-purple-600 text-white'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#00a859] text-white'
+                : 'text-[#4a6b5a] hover:bg-[#eaf8f0]'
             }`}
           >
             {lang === 'bn' ? 'লাইভ ও আপকামিং' : 'Live & Upcoming'}
           </button>
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               activeTab === 'history'
-                ? 'bg-purple-600 text-white'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-[#00a859] text-white'
+                : 'text-[#4a6b5a] hover:bg-[#eaf8f0]'
             }`}
           >
             {lang === 'bn' ? `বাজির ইতিহাস (${bets.length})` : `My Bets (${bets.length})`}
@@ -217,41 +217,41 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
         <div className="lg:col-span-2 space-y-4">
           {activeTab === 'fixtures' ? (
             filteredEvents.length === 0 ? (
-              <div className="p-8 text-center bg-[#750035] border border-[#940042] rounded-2xl space-y-2 shadow-lg">
-                <Trophy className="w-10 h-10 mx-auto text-amber-400/80" />
-                <h3 className="text-sm font-black text-white">
+              <div className="p-8 text-center bg-white border border-[#dceee3] rounded-2xl space-y-2 shadow-xs">
+                <Trophy className="w-10 h-10 mx-auto text-[#00a859]" />
+                <h3 className="text-sm font-black text-[#182620]">
                   {lang === 'bn'
                     ? 'কোনো স্পোর্টস ইভেন্ট বা API এখনো যুক্ত করা হয়নি'
                     : 'No Sports Events Connected Yet'}
                 </h3>
-                <p className="text-xs text-rose-200/80 max-w-md mx-auto">
+                <p className="text-xs text-[#4a6b5a] max-w-md mx-auto">
                   {lang === 'bn'
-                    ? 'অ্যাডমিন প্যানেল থেকে স্পোর্টস বা ক্যাসিনো API সংযুক্ত করলে এখানে লাইভ ম্যাচগুলো প্রদর্শিত হবে।'
-                    : 'Connect an external sports feed in the Admin Portal to display live matches here.'}
+                    ? 'লাইভ স্পোর্টস API সংযুক্ত হলে এখানে রিয়েল-টাইম ম্যাচ এবং অডস প্রদর্শিত হবে।'
+                    : 'Live matches and odds will appear here once external sports feeds are connected.'}
                 </p>
               </div>
             ) : (
             filteredEvents.map((evt) => (
               <div
                 key={evt.id}
-                className="bg-[#750035] border border-[#940042] rounded-2xl overflow-hidden shadow-lg hover:border-slate-600 transition"
+                className="bg-white border border-[#dceee3] rounded-2xl overflow-hidden shadow-xs hover:border-[#00a859]/50 transition"
               >
                 {/* Event Header */}
-                <div className="p-3 sm:p-4 bg-[#61002a] border-b border-[#940042] flex items-center justify-between">
+                <div className="p-3 sm:p-4 bg-[#f4fbf7] border-b border-[#e5f3eb] flex items-center justify-between">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-bold text-amber-400 uppercase tracking-wider">
+                    <span className="font-bold text-[#059669] uppercase tracking-wider">
                       {evt.league}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
                     {evt.status === 'LIVE' ? (
-                      <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 text-[10px] font-extrabold animate-pulse flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 text-[10px] font-extrabold animate-pulse flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                         LIVE ({evt.currentOverOrMin})
                       </span>
                     ) : (
-                      <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                      <span className="text-[11px] text-[#4a6b5a] flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {evt.startTime}
                       </span>
@@ -263,18 +263,18 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                 <div className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
-                      <div className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                      <div className="text-sm sm:text-base font-extrabold text-[#182620] flex items-center gap-2">
                         <span>{evt.homeTeam}</span>
                         {evt.scoreHome && (
-                          <span className="text-xs font-mono text-emerald-400 bg-[#61002a] px-2 py-0.5 rounded">
+                          <span className="text-xs font-mono text-[#059669] bg-[#eaf8f0] px-2 py-0.5 rounded">
                             {evt.scoreHome}
                           </span>
                         )}
                       </div>
-                      <div className="text-sm sm:text-base font-extrabold text-white flex items-center gap-2">
+                      <div className="text-sm sm:text-base font-extrabold text-[#182620] flex items-center gap-2">
                         <span>{evt.awayTeam}</span>
                         {evt.scoreAway && (
-                          <span className="text-xs font-mono text-emerald-400 bg-[#61002a] px-2 py-0.5 rounded">
+                          <span className="text-xs font-mono text-[#059669] bg-[#eaf8f0] px-2 py-0.5 rounded">
                             {evt.scoreAway}
                           </span>
                         )}
@@ -286,9 +286,9 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                   <div className="space-y-3 pt-2">
                     {evt.markets.map((mkt) => (
                       <div key={mkt.id} className="space-y-1.5">
-                        <div className="text-xs text-slate-400 font-medium flex items-center justify-between">
+                        <div className="text-xs text-[#4a6b5a] font-medium flex items-center justify-between">
                           <span>{mkt.name}</span>
-                          <span className="text-[10px] text-slate-400 uppercase">{mkt.status}</span>
+                          <span className="text-[10px] text-[#618270] uppercase">{mkt.status}</span>
                         </div>
 
                         {/* Odds Buttons */}
@@ -314,16 +314,16 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                                 }
                                 className={`p-2 rounded-xl flex items-center justify-between border transition text-left cursor-pointer ${
                                   isSelected
-                                    ? 'bg-amber-400 text-slate-950 font-bold border-amber-300 shadow-md'
-                                    : 'bg-[#47001f] hover:bg-[#940042] text-slate-200 border-[#940042]'
+                                    ? 'bg-[#00a859] text-white font-bold border-[#00994d] shadow-md'
+                                    : 'bg-[#f4fbf7] hover:bg-[#e5f6ec] text-[#182620] border-[#cde8d8]'
                                 }`}
                               >
                                 <span className="text-xs truncate mr-1">{sel.name}</span>
                                 <span
                                   className={`text-xs font-mono font-extrabold px-1.5 py-0.5 rounded ${
                                     isSelected
-                                      ? 'bg-slate-950 text-amber-400'
-                                      : 'bg-[#61002a] text-amber-400'
+                                      ? 'bg-white text-[#059669]'
+                                      : 'bg-white text-[#00a859] border border-[#dceee3]'
                                   }`}
                                 >
                                   {sel.odds.toFixed(2)}
@@ -343,21 +343,21 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
             /* Bets History View */
             <div className="space-y-3">
               {bets.length === 0 ? (
-                <div className="p-8 text-center bg-[#750035] rounded-2xl border border-[#940042] text-slate-400 text-xs">
+                <div className="p-8 text-center bg-white rounded-2xl border border-[#dceee3] text-[#4a6b5a] text-xs">
                   কোনো বাজি খুঁজে পাওয়া যায়নি (No placed bets yet).
                 </div>
               ) : (
                 bets.map((b) => (
                   <div
                     key={b.id}
-                    className="p-4 rounded-2xl bg-[#750035] border border-[#940042] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
+                    className="p-4 rounded-2xl bg-white border border-[#dceee3] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-2xs"
                   >
                     <div>
-                      <div className="text-xs text-amber-400 font-bold">{b.eventName}</div>
-                      <div className="text-sm font-extrabold text-white mt-0.5">
+                      <div className="text-xs text-[#059669] font-bold">{b.eventName}</div>
+                      <div className="text-sm font-extrabold text-[#182620] mt-0.5">
                         {b.selectionName} ({b.marketName})
                       </div>
-                      <div className="text-[11px] text-slate-400 font-mono mt-1">
+                      <div className="text-[11px] text-[#4a6b5a] font-mono mt-1">
                         Odds: {b.acceptedOdds.toFixed(2)} • Placed:{' '}
                         {new Date(b.placedAt).toLocaleTimeString()}
                       </div>
@@ -367,16 +367,16 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                       <span
                         className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
                           b.status === 'WON'
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                             : b.status === 'LOST'
-                            ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                            : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}
                       >
                         {b.status}
                       </span>
-                      <div className="text-xs text-slate-300">
-                        Stake: <span className="font-bold text-white">৳{b.stakePaisa / 100}</span>
+                      <div className="text-xs text-[#4a6b5a]">
+                        Stake: <span className="font-bold text-[#182620]">৳{b.stakePaisa / 100}</span>
                       </div>
                     </div>
                   </div>
@@ -388,18 +388,18 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
 
         {/* Right Column: Sticky Interactive Bet Slip */}
         <div className="lg:col-span-1">
-          <div className="sticky top-24 bg-[#750035] border border-[#940042] rounded-3xl p-4 shadow-xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#940042]">
+          <div className="sticky top-24 bg-white border border-[#dceee3] rounded-3xl p-4 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#e8f4ed]">
               <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-[#FFC943]" />
-                <h3 className="font-extrabold text-sm text-white">
+                <Trophy className="w-4 h-4 text-[#00a859]" />
+                <h3 className="font-extrabold text-sm text-[#182620]">
                   {lang === 'bn' ? 'বেট স্লিপ (Bet Slip)' : 'Bet Slip'}
                 </h3>
               </div>
               {selectedBet && (
                 <button
                   onClick={() => setSelectedBet(null)}
-                  className="text-xs text-rose-400 hover:underline"
+                  className="text-xs text-rose-600 hover:underline font-bold"
                 >
                   {lang === 'bn' ? 'মুছে ফেলুন' : 'Clear'}
                 </button>
@@ -409,29 +409,29 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
             {selectedBet ? (
               <div className="space-y-4">
                 {/* Selected Match Card */}
-                <div className="p-3 rounded-2xl bg-[#47001f] border border-[#940042] space-y-1">
-                  <div className="text-[11px] text-slate-400 truncate">
+                <div className="p-3 rounded-2xl bg-[#f4fbf7] border border-[#dceee3] space-y-1">
+                  <div className="text-[11px] text-[#4a6b5a] truncate">
                     {selectedBet.event.homeTeam} vs {selectedBet.event.awayTeam}
                   </div>
-                  <div className="text-xs font-bold text-white flex items-center justify-between">
+                  <div className="text-xs font-bold text-[#182620] flex items-center justify-between">
                     <span>{selectedBet.selectionName}</span>
-                    <span className="font-mono text-amber-400 font-extrabold text-sm">
+                    <span className="font-mono text-[#00a859] font-extrabold text-sm">
                       {selectedBet.odds.toFixed(2)}
                     </span>
                   </div>
-                  <div className="text-[10px] text-slate-400">{selectedBet.marketName}</div>
+                  <div className="text-[10px] text-[#618270]">{selectedBet.marketName}</div>
                 </div>
 
                 {/* Stake Presets & Input */}
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-400 block font-medium">
+                  <label className="text-xs text-[#4a6b5a] block font-medium">
                     {lang === 'bn' ? 'স্টেক (বাজির পরিমাণ ৳):' : 'Stake Amount (৳):'}
                   </label>
                   <input
                     type="number"
                     value={stakeTk}
                     onChange={(e) => setStakeTk(Math.max(10, Number(e.target.value)))}
-                    className="w-full px-4 py-2.5 rounded-full bg-[#940042] text-white font-mono font-bold text-sm focus:outline-hidden focus:ring-2 focus:ring-[#FFC943]"
+                    className="w-full px-4 py-2.5 rounded-full bg-[#f8fcfa] border border-[#cde8d8] text-[#182620] font-mono font-bold text-sm focus:outline-hidden focus:ring-2 focus:ring-[#00a859]"
                   />
 
                   {/* Quick Stake Buttons */}
@@ -440,10 +440,10 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                       <button
                         key={amt}
                         onClick={() => setStakeTk(amt)}
-                        className={`py-1.5 rounded-xl text-xs font-bold transition ${
+                        className={`py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
                           stakeTk === amt
-                            ? 'bg-[#FFC943] text-slate-950'
-                            : 'bg-[#61002a] text-slate-400 hover:text-white'
+                            ? 'bg-[#00a859] text-white'
+                            : 'bg-[#f4fbf7] border border-[#dceee3] text-[#4a6b5a] hover:text-[#182620]'
                         }`}
                       >
                         ৳{amt}
@@ -453,9 +453,9 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                 </div>
 
                 {/* Potential Return Display */}
-                <div className="p-3 rounded-2xl bg-[#61002a] border border-[#940042] flex items-center justify-between text-xs">
-                  <span className="text-slate-400">{lang === 'bn' ? 'সম্ভাব্য রিটার্ন:' : 'Potential Return:'}</span>
-                  <span className="font-extrabold font-mono text-emerald-400 text-sm">
+                <div className="p-3 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce] flex items-center justify-between text-xs">
+                  <span className="text-[#4a6b5a]">{lang === 'bn' ? 'সম্ভাব্য রিটার্ন:' : 'Potential Return:'}</span>
+                  <span className="font-extrabold font-mono text-[#059669] text-sm">
                     ৳{potentialReturnTk.toLocaleString()}
                   </span>
                 </div>
@@ -467,9 +467,9 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                     id="oddsConsent"
                     checked={oddsChangedConsent}
                     onChange={(e) => setOddsChangedConsent(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-600 text-amber-500 focus:ring-amber-400"
+                    className="mt-0.5 rounded border-emerald-300 text-[#00a859] focus:ring-[#00a859] accent-[#00a859]"
                   />
-                  <label htmlFor="oddsConsent" className="text-[11px] text-slate-400 leading-tight">
+                  <label htmlFor="oddsConsent" className="text-[11px] text-[#4a6b5a] leading-tight">
                     {lang === 'bn'
                       ? 'অডস পরিবর্তন হলে স্বয়ংক্রিয়ভাবে গ্রহণ করুন (Accept odds changes automatically)'
                       : 'Accept odds changes automatically'}
@@ -481,8 +481,8 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                   <div
                     className={`p-3 rounded-xl text-xs ${
                       slipFeedback.type === 'success'
-                        ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-300'
-                        : 'bg-rose-950/40 border border-rose-500/30 text-rose-300'
+                        ? 'bg-emerald-50 border border-emerald-200 text-emerald-800'
+                        : 'bg-rose-50 border border-rose-200 text-rose-700'
                     }`}
                   >
                     {slipFeedback.message}
@@ -493,7 +493,7 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                 <button
                   onClick={handlePlaceBet}
                   disabled={submitting}
-                  className="w-full py-3 rounded-full gold-gradient text-slate-950 font-black text-sm shadow-lg shadow-amber-500/20 hover:brightness-110 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                  className="w-full py-3 rounded-full bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-black text-sm shadow-lg shadow-emerald-900/15 hover:brightness-105 active:scale-95 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
                   <span>
@@ -508,8 +508,8 @@ export const SportsbookView: React.FC<SportsbookViewProps> = ({
                 </button>
               </div>
             ) : (
-              <div className="p-8 text-center text-slate-400 space-y-2">
-                <Trophy className="w-8 h-8 mx-auto text-slate-500" />
+              <div className="p-8 text-center text-[#618270] space-y-2">
+                <Trophy className="w-8 h-8 mx-auto text-[#9dcab2]" />
                 <p className="text-xs">
                   {lang === 'bn'
                     ? 'কোনো বাজি নির্বাচিত হয়নি। ম্যাচের যেকোনো অডস নির্বাচন করে স্লিপে যুক্ত করুন।'

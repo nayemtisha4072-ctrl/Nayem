@@ -17,6 +17,15 @@ import { testRunner } from './server/testRunner.ts';
 import { crashEngine } from './server/crashEngine.ts';
 import { AVIATOR_COVER_IMAGE, SEEDED_GAMES } from './server/gamesCatalog.ts';
 import {
+  buildExternalApiRequest,
+  extractGamesArray,
+  extractLaunchUrlFromPayload,
+  isSafeExternalHttpUrl,
+  resolveExternalEndpoint,
+  substituteUrlTemplate,
+  verifyWebhookSignatureIfConfigured,
+} from './server/casinoGatewayHelper.ts';
+import {
   BDT_PRESETS_TK,
   MIN_DEPOSIT_PAISA,
   MAX_DEPOSIT_PAISA,
@@ -132,7 +141,8 @@ function normalizeGameCategory(raw?: string): GameItem['category'] {
 function importExternalGamesFromArray(
   rawList: any[],
   sourcePrefix: string,
-  apiProviderId?: string
+  apiProviderId?: string,
+  defaultProviderName = 'External API'
 ): { addedCount: number; updatedCount: number; imported: GameItem[] } {
   let addedCount = 0;
   let updatedCount = 0;
@@ -140,33 +150,47 @@ function importExternalGamesFromArray(
 
   for (const item of rawList) {
     if (!item || typeof item !== 'object') continue;
-    const title = String(item.title || item.game_name || item.name || item.gameName || '').trim();
-    const gameCode = String(item.gameCode || item.game_code || item.code || item.slug || item.id || '').trim();
+    const title = String(
+      item.title || item.game_name || item.name || item.gameName || item.en_name || item.titleEn || ''
+    ).trim();
+    const gameCode = String(
+      item.gameCode || item.game_code || item.game_uid || item.game_id || item.code || item.slug || item.id || ''
+    ).trim();
     if (!title) continue;
 
-    const category = normalizeGameCategory(item.category || item.game_type || item.type);
-    const provider = String(item.provider || item.vendor || item.provider_name || item.studio || 'External API').trim();
-    const launchRaw = String(item.realLaunchUrl || item.launch_url || item.launchUrl || item.url || '').trim();
+    const category = normalizeGameCategory(item.category || item.game_type || item.type || item.categoryName);
+    const provider = String(
+      item.provider || item.vendor || item.vendor_name || item.provider_name || item.studio || defaultProviderName || 'External API'
+    ).trim();
+    const launchRaw = String(
+      item.realLaunchUrl || item.launch_url || item.launchUrl || item.gameUrl || item.game_url || item.iframeUrl || item.url || ''
+    ).trim();
     const realLaunchUrl = launchRaw && isSafeExternalUrl(launchRaw) ? launchRaw : '';
-    const thumbRaw = String(item.thumbnail || item.img || item.image || item.icon || item.banner || '').trim();
-    const thumbnail = thumbRaw && (thumbRaw.startsWith('http://') || thumbRaw.startsWith('https://') || thumbRaw.startsWith('/'))
-      ? thumbRaw
-      : AVIATOR_COVER_IMAGE;
+    const thumbRaw = String(
+      item.thumbnail || item.thumbnail_url || item.thumb || item.img || item.image || item.icon || item.cover || item.banner || ''
+    ).trim();
+    const thumbnail =
+      thumbRaw && (thumbRaw.startsWith('http://') || thumbRaw.startsWith('https://') || thumbRaw.startsWith('/'))
+        ? thumbRaw
+        : AVIATOR_COVER_IMAGE;
 
     const id = `${sourcePrefix}_${(gameCode || title).toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 40)}`;
     if (id === 'aviator_crash' || id === 'dst_spribe_aviator') {
       continue;
     }
 
-    const existing = db.games.find((g) => g.id === id || (gameCode && g.gameCode === gameCode && g.provider === provider));
+    const existing = db.games.find(
+      (g) => g.id === id || (gameCode && g.gameCode === gameCode && g.apiProviderId === (apiProviderId || sourcePrefix))
+    );
     if (existing) {
       existing.title = title;
-      existing.titleBn = String(item.titleBn || title);
+      existing.titleBn = String(item.titleBn || item.bn_name || title);
       existing.category = category;
       existing.provider = provider;
       existing.thumbnail = thumbnail;
       existing.realLaunchUrl = realLaunchUrl || existing.realLaunchUrl;
-      existing.playMode = existing.realLaunchUrl ? 'iframe' : 'interactive';
+      existing.apiProviderId = apiProviderId || existing.apiProviderId;
+      existing.playMode = existing.realLaunchUrl || existing.apiProviderId ? 'iframe' : 'interactive';
       existing.isAvailable = true;
       updatedCount++;
       imported.push(existing);
@@ -174,7 +198,7 @@ function importExternalGamesFromArray(
       const gameObj: GameItem = {
         id,
         title,
-        titleBn: String(item.titleBn || title),
+        titleBn: String(item.titleBn || item.bn_name || title),
         category,
         provider,
         rtp: String(item.rtp || '96.5%'),
@@ -182,7 +206,7 @@ function importExternalGamesFromArray(
         isLive: category === 'live' || Boolean(item.isLive),
         isHot: Boolean(item.isHot),
         isAvailable: true,
-        playMode: realLaunchUrl ? 'iframe' : 'interactive',
+        playMode: realLaunchUrl || apiProviderId ? 'iframe' : 'interactive',
         realLaunchUrl,
         gameCode: gameCode || id,
         apiProviderId: apiProviderId || sourcePrefix,
@@ -708,6 +732,7 @@ app.put('/api/v1/user/profile', (req: Request, res: Response) => {
 
   const {
     fullName,
+    nickname,
     email,
     birthday,
     gender,
@@ -720,10 +745,23 @@ app.put('/api/v1/user/profile', (req: Request, res: Response) => {
   } = req.body;
 
   if (fullName !== undefined) user.fullName = String(fullName).trim();
+  if (nickname !== undefined) user.nickname = String(nickname).trim().slice(0, 32);
   if (email !== undefined) user.email = String(email).trim();
   if (birthday !== undefined) user.birthday = String(birthday).trim();
   if (gender !== undefined) user.gender = gender;
-  if (avatarUrl !== undefined) user.avatarUrl = String(avatarUrl).trim();
+  if (avatarUrl !== undefined) {
+    const av = String(avatarUrl).trim();
+    if (
+      av.startsWith('data:image/') ||
+      av.startsWith('/') ||
+      av.startsWith('https://') ||
+      av.startsWith('http://')
+    ) {
+      if (av.length <= 2_000_000) {
+        user.avatarUrl = av;
+      }
+    }
+  }
 
   // E-wallet Linking
   if (linkedEwalletNumber !== undefined) {
@@ -2056,15 +2094,31 @@ app.post('/api/v1/games/session', async (req: Request, res: Response) => {
   }
 
   // Resolve credentials from game's connected Casino API connector or Universal Live Gateway
-  const connector = game.apiProviderId ? db.casinoApis.get(game.apiProviderId) : undefined;
+  const connector =
+    (game.apiProviderId ? db.casinoApis.get(game.apiProviderId) : undefined) ||
+    Array.from(db.casinoApis.values()).find((c) => c.isEnabled && c.apiEndpoint);
   const liveGw = db.liveGatewayConfig;
   const launchToken = generateOpaqueToken('live');
+
+  db.launchTokens.set(launchToken, {
+    userId: user.id,
+    gameId: game.id,
+    apiProviderId: connector?.id || game.apiProviderId,
+    createdAt: Date.now(),
+    expiresAt: Date.now() + 7200 * 1000,
+  });
 
   const host = req.get('host') || 'localhost:3000';
   const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
   const returnUrl = `${protocol}://${host}/`;
+  const callbackUrl = `${protocol}://${host}/api/v1/casino/seamless/callback`;
 
   const code = game.gameCode || game.id;
+  const prefix = connector?.playerPrefix ?? liveGw.playerPrefix ?? 'fb88_';
+  const externalUsername = prefix && !user.username.startsWith(prefix) ? `${prefix}${user.username}` : user.username;
+  const currency = connector?.currency || liveGw.currency || 'BDT';
+  const langCode = lang === 'bn' ? 'bn' : 'en';
+
   const rawBaseApi =
     (connector?.isEnabled && connector.apiEndpoint) ||
     (liveGw.isEnabled && liveGw.apiBaseUrl) ||
@@ -2074,10 +2128,147 @@ app.post('/api/v1/games/session', async (req: Request, res: Response) => {
     (connector?.isEnabled && connector.operatorCode) ||
     (liveGw.isEnabled && liveGw.operatorCode) ||
     '';
+  const secretKey =
+    (connector?.isEnabled && connector.secretKey) ||
+    (liveGw.isEnabled && liveGw.apiSecret) ||
+    liveGw.apiKey ||
+    '';
 
-  const gatewayUrl = baseApi
-    ? `${baseApi}/game/launch?companyCode=${encodeURIComponent(compCode)}&gameCode=${encodeURIComponent(code)}&username=${encodeURIComponent(user.username)}&currency=BDT&mode=real&returnUrl=${encodeURIComponent(returnUrl)}&token=${encodeURIComponent(launchToken)}&lang=${lang === 'bn' ? 'bn' : 'en'}`
-    : '';
+  const templateVars = {
+    username: externalUsername,
+    playerId: externalUsername,
+    userId: user.id,
+    gameCode: code,
+    currency,
+    token: launchToken,
+    returnUrl,
+    callbackUrl,
+    lang: langCode,
+    operatorCode: compCode,
+  };
+
+  let resolvedLaunchUrl = '';
+  let externalLaunchError = '';
+
+  // 1) If the game itself has a template URL with {placeholders}, resolve directly
+  if (game.realLaunchUrl && /\{[a-zA-Z0-9_]+\}/.test(game.realLaunchUrl)) {
+    const sub = substituteUrlTemplate(game.realLaunchUrl, templateVars);
+    if (isSafeExternalHttpUrl(sub)) resolvedLaunchUrl = sub;
+  }
+
+  // 2) If connector or gateway has a real external API endpoint, execute launch flow
+  const launchEndpointRaw = connector?.launchEndpoint || '';
+  const launchMethod = connector?.launchMethod || (launchEndpointRaw ? 'POST' : 'POST');
+
+  if (!resolvedLaunchUrl && (connector?.isEnabled || liveGw.isEnabled) && (baseApi || launchEndpointRaw)) {
+    const targetUrlRaw = resolveExternalEndpoint(baseApi, launchEndpointRaw, '/game/launch');
+    const substitutedTarget = substituteUrlTemplate(targetUrlRaw, templateVars);
+
+    if (launchMethod === 'DIRECT_URL') {
+      if (substitutedTarget !== targetUrlRaw && isSafeExternalHttpUrl(substitutedTarget)) {
+        resolvedLaunchUrl = substitutedTarget;
+      } else if (isSafeExternalHttpUrl(targetUrlRaw)) {
+        const sep = targetUrlRaw.includes('?') ? '&' : '?';
+        resolvedLaunchUrl = `${targetUrlRaw}${sep}operatorCode=${encodeURIComponent(compCode)}&gameCode=${encodeURIComponent(code)}&username=${encodeURIComponent(externalUsername)}&currency=${encodeURIComponent(currency)}&mode=real&returnUrl=${encodeURIComponent(returnUrl)}&token=${encodeURIComponent(launchToken)}&lang=${langCode}`;
+      }
+    } else if (isSafeExternalHttpUrl(substitutedTarget) && !(game.id === 'aviator_crash' || game.id === 'dst_spribe_aviator')) {
+      const wallet = db.wallets.get(user.id);
+      const balanceTk = wallet ? Number((wallet.availablePaisa / 100).toFixed(2)) : 0;
+      const launchPayload = {
+        operatorCode: compCode,
+        companyCode: compCode,
+        agentCode: compCode,
+        gameCode: code,
+        game_code: code,
+        game_uid: code,
+        gameId: code,
+        username: externalUsername,
+        playerId: externalUsername,
+        member_account: externalUsername,
+        userId: user.id,
+        currency,
+        balance: balanceTk,
+        mode: playMode === 'demo' ? 'demo' : 'real',
+        lang: langCode,
+        returnUrl,
+        return_url: returnUrl,
+        callbackUrl,
+        callback_url: callbackUrl,
+        token: launchToken,
+      };
+
+      const { headers, signedBody } = buildExternalApiRequest({
+        operatorCode: compCode,
+        secretKey,
+        authType: connector?.authType || 'bearer',
+        customHeaderName: connector?.customHeaderName,
+        extraHeadersJson: connector?.extraHeadersJson,
+        payload: launchPayload,
+      });
+
+      const tryLaunchCall = async (method: 'POST' | 'GET'): Promise<{ url: string; err?: string }> => {
+        try {
+          const controller = new AbortController();
+          const timer = setTimeout(() => controller.abort(), 7000);
+          let url = substitutedTarget;
+          if (method === 'GET') {
+            const qs = new URLSearchParams({
+              operatorCode: compCode,
+              gameCode: code,
+              username: externalUsername,
+              currency,
+              token: launchToken,
+              returnUrl,
+              lang: langCode,
+            }).toString();
+            url = `${substitutedTarget}${substitutedTarget.includes('?') ? '&' : '?'}${qs}`;
+          }
+          const resp = await fetch(url, {
+            method,
+            headers,
+            ...(method === 'POST' ? { body: JSON.stringify(signedBody) } : {}),
+            signal: controller.signal,
+          });
+          clearTimeout(timer);
+          const contentType = resp.headers.get('content-type') || '';
+          if (contentType.includes('text/html') && resp.ok && resp.url && isSafeExternalHttpUrl(resp.url)) {
+            return { url: resp.url };
+          }
+          const json = await resp.json().catch(() => null);
+          if (json) {
+            const extracted = extractLaunchUrlFromPayload(json);
+            if (extracted) return { url: extracted };
+            if (!resp.ok) {
+              return { url: '', err: json.message || json.error || json.msg || `HTTP ${resp.status}` };
+            }
+          }
+          if (!resp.ok) return { url: '', err: `HTTP ${resp.status}` };
+          return { url: '' };
+        } catch (err: any) {
+          return { url: '', err: err?.message || 'Launch API request failed' };
+        }
+      };
+
+      const firstAttempt = await tryLaunchCall(launchMethod === 'GET' ? 'GET' : 'POST');
+      if (firstAttempt.url) {
+        resolvedLaunchUrl = firstAttempt.url;
+      } else if (!connector?.launchMethod) {
+        const secondAttempt = await tryLaunchCall('GET');
+        if (secondAttempt.url) {
+          resolvedLaunchUrl = secondAttempt.url;
+        } else {
+          externalLaunchError = firstAttempt.err || secondAttempt.err || '';
+        }
+      } else {
+        externalLaunchError = firstAttempt.err || '';
+      }
+    }
+  }
+
+  // 3) Fallback to game's static direct launch URL if valid
+  if (!resolvedLaunchUrl && game.realLaunchUrl && isSafeExternalHttpUrl(game.realLaunchUrl)) {
+    resolvedLaunchUrl = game.realLaunchUrl;
+  }
 
   user.currentActiveGame = game.title;
   user.lastActiveTime = new Date().toISOString();
@@ -2097,9 +2288,9 @@ app.post('/api/v1/games/session', async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    hasRealLaunch: Boolean(game.realLaunchUrl || gatewayUrl),
-    launchUrl: game.realLaunchUrl || gatewayUrl,
-    gatewayUrl,
+    hasRealLaunch: Boolean(resolvedLaunchUrl),
+    launchUrl: resolvedLaunchUrl,
+    gatewayUrl: resolvedLaunchUrl,
     token: launchToken,
     game,
     companyCode: compCode,
@@ -2110,7 +2301,12 @@ app.post('/api/v1/games/session', async (req: Request, res: Response) => {
     hasNativeEngine: game.id === 'aviator_crash' || game.id === 'dst_spribe_aviator',
     expiresIn: 7200,
     providerStatus: connector?.isEnabled || liveGw.isEnabled || game.realLaunchUrl ? 'CONNECTED' : 'DISCONNECTED',
-    message: `লাইভ গেমিং সেশন সফলভাবে শুরু হয়েছে (${game.title})।`,
+    externalLaunchError: !resolvedLaunchUrl && externalLaunchError ? externalLaunchError : undefined,
+    message: resolvedLaunchUrl
+      ? `লাইভ গেমিং সেশন সফলভাবে শুরু হয়েছে (${game.title})।`
+      : externalLaunchError
+      ? `API গেম লঞ্চ রেসপন্স: ${externalLaunchError}`
+      : `লাইভ গেমিং সেশন প্রস্তুত (${game.title})।`,
   });
 });
 
@@ -3214,6 +3410,77 @@ app.get('/api/v1/admin/casino-apis', (req: Request, res: Response) => {
   res.json({ apis: Array.from(db.casinoApis.values()) });
 });
 
+// Helper: Execute external API ping / diagnostic
+async function pingExternalCasinoConnector(params: {
+  name?: string;
+  apiEndpoint?: string;
+  gamesListEndpoint?: string;
+  gamesListMethod?: 'GET' | 'POST';
+  operatorCode?: string;
+  secretKey?: string;
+  authType?: string;
+  customHeaderName?: string;
+  extraHeadersJson?: string;
+}) {
+  const startTime = Date.now();
+  const targetUrl = resolveExternalEndpoint(params.apiEndpoint, params.gamesListEndpoint, '');
+  let liveVerified = false;
+  let httpStatus = 0;
+  let detectedGamesCount = 0;
+  let responsePreview = '';
+  let errorDetail = '';
+
+  if (!isSafeExternalHttpUrl(targetUrl)) {
+    return {
+      liveVerified: false,
+      httpStatus: 0,
+      latencyMs: 1,
+      detectedGamesCount: 0,
+      responsePreview: '',
+      errorDetail: 'অবৈধ বা প্রাইভেট URL — পাবলিক https:// এন্ডপয়েন্ট দিন।',
+    };
+  }
+
+  const { headers, signedBody } = buildExternalApiRequest({
+    operatorCode: params.operatorCode,
+    secretKey: params.secretKey,
+    authType: params.authType,
+    customHeaderName: params.customHeaderName,
+    extraHeadersJson: params.extraHeadersJson,
+    payload: { currency: 'BDT' },
+  });
+
+  const method = params.gamesListMethod === 'POST' ? 'POST' : 'GET';
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5500);
+    const resp = await fetch(targetUrl, {
+      method,
+      headers,
+      ...(method === 'POST' ? { body: JSON.stringify(signedBody) } : {}),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    httpStatus = resp.status;
+    const rawText = await resp.text().catch(() => '');
+    responsePreview = rawText.slice(0, 180);
+    try {
+      const parsed = JSON.parse(rawText);
+      const gamesArr = extractGamesArray(parsed);
+      detectedGamesCount = gamesArr.length;
+    } catch {
+      // non-JSON response is okay for health endpoint
+    }
+    liveVerified = resp.status >= 200 && resp.status < 500;
+  } catch (err: any) {
+    liveVerified = false;
+    errorDetail = err?.name === 'AbortError' ? 'Request timed out (5.5s)' : err?.message || 'Connection refused';
+  }
+
+  const latencyMs = Math.max(1, Date.now() - startTime);
+  return { liveVerified, httpStatus, latencyMs, detectedGamesCount, responsePreview, errorDetail };
+}
+
 // 2. Create New Casino / Slot / Live Casino API Connector
 app.post('/api/v1/admin/casino-apis', (req: Request, res: Response) => {
   const admin = getAuthenticatedUser(req);
@@ -3229,6 +3496,15 @@ app.post('/api/v1/admin/casino-apis', (req: Request, res: Response) => {
     secretKey,
     seamlessWalletCallbackUrl,
     currency,
+    authType,
+    customHeaderName,
+    gamesListEndpoint,
+    gamesListMethod,
+    launchEndpoint,
+    launchMethod,
+    playerPrefix,
+    webhookSecret,
+    extraHeadersJson,
     isEnabled,
   } = req.body || {};
 
@@ -3249,6 +3525,15 @@ app.post('/api/v1/admin/casino-apis', (req: Request, res: Response) => {
     secretKey: String(secretKey || '').trim(),
     seamlessWalletCallbackUrl: String(seamlessWalletCallbackUrl || '/api/v1/casino/seamless/callback').trim(),
     currency: String(currency || 'BDT').trim(),
+    authType: (authType || 'bearer') as any,
+    customHeaderName: String(customHeaderName || 'X-Api-Key').trim(),
+    gamesListEndpoint: String(gamesListEndpoint || '').trim(),
+    gamesListMethod: (gamesListMethod === 'POST' ? 'POST' : 'GET') as 'GET' | 'POST',
+    launchEndpoint: String(launchEndpoint || '').trim(),
+    launchMethod: (launchMethod || 'POST') as 'POST' | 'GET' | 'DIRECT_URL',
+    playerPrefix: String(playerPrefix !== undefined ? playerPrefix : 'fb88_').trim(),
+    webhookSecret: String(webhookSecret || '').trim(),
+    extraHeadersJson: String(extraHeadersJson || '').trim(),
     latencyMs: 0,
     lastPingAt: new Date().toISOString(),
     totalGamesIntegrated: 0,
@@ -3261,11 +3546,61 @@ app.post('/api/v1/admin/casino-apis', (req: Request, res: Response) => {
     action: 'ADMIN_CREATE_CASINO_API',
     target: connectorId,
     timestamp: new Date().toISOString(),
-    metadata: { name: connector.name, category: connector.category },
+    metadata: { name: connector.name, category: connector.category, authType: connector.authType },
   });
   db.saveToDisk();
 
   res.status(201).json({ success: true, api: connector, message: `${connector.name} API সফলভাবে যুক্ত হয়েছে!` });
+});
+
+// 2b. Test Draft Casino API Credentials Before Saving
+app.post('/api/v1/admin/casino-apis/test-draft', async (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+
+  const body = req.body || {};
+  const result = await pingExternalCasinoConnector(body);
+  res.json({
+    success: result.liveVerified,
+    status: result.liveVerified ? 'CONNECTED' : 'DISCONNECTED',
+    latencyMs: result.latencyMs,
+    httpStatus: result.httpStatus,
+    detectedGamesCount: result.detectedGamesCount,
+    responsePreview: result.responsePreview,
+    pingMessage: result.liveVerified
+      ? `HTTP ${result.httpStatus} সংযোগ সফল! (${result.latencyMs}ms${result.detectedGamesCount > 0 ? ` • ${result.detectedGamesCount}টি গেম শনাক্ত` : ''})`
+      : `সংযোগ ব্যর্থ${result.errorDetail ? `: ${result.errorDetail}` : ''}`,
+  });
+});
+
+// 2c. Test Seamless Wallet Loopback Endpoint Diagnostic
+app.post('/api/v1/admin/casino-apis/test-seamless-loopback', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+
+  const { username } = req.body || {};
+  const target = username
+    ? Array.from(db.users.values()).find((u) => u.username === username || u.id === username)
+    : Array.from(db.users.values()).find((u) => u.role === 'user') || admin;
+
+  const wallet = target ? db.wallets.get(target.id) : undefined;
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+
+  res.json({
+    success: true,
+    callbackReady: true,
+    samplePlayer: target ? target.username : 'none',
+    sampleBalanceTk: wallet ? wallet.availablePaisa / 100 : 0,
+    endpoints: {
+      callback: `${protocol}://${host}/api/v1/casino/seamless/callback`,
+      balance: `${protocol}://${host}/api/v1/casino/seamless/balance`,
+      bet: `${protocol}://${host}/api/v1/casino/seamless/bet`,
+      win: `${protocol}://${host}/api/v1/casino/seamless/win`,
+      rollback: `${protocol}://${host}/api/v1/casino/seamless/rollback`,
+    },
+    message: `Seamless Wallet রেডি (টেস্ট প্লেয়ার: ${target?.username || 'N/A'}, ব্যালেন্স: ৳${wallet ? (wallet.availablePaisa / 100).toFixed(2) : '0.00'})`,
+  });
 });
 
 // 3. Connect / Update a Casino API configuration
@@ -3274,7 +3609,26 @@ app.post('/api/v1/admin/casino-apis/:id', (req: Request, res: Response) => {
   if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
 
   const { id } = req.params;
-  const { name, providerKey, category, apiEndpoint, operatorCode, secretKey, seamlessWalletCallbackUrl, currency, isEnabled } = req.body || {};
+  const {
+    name,
+    providerKey,
+    category,
+    apiEndpoint,
+    operatorCode,
+    secretKey,
+    seamlessWalletCallbackUrl,
+    currency,
+    authType,
+    customHeaderName,
+    gamesListEndpoint,
+    gamesListMethod,
+    launchEndpoint,
+    launchMethod,
+    playerPrefix,
+    webhookSecret,
+    extraHeadersJson,
+    isEnabled,
+  } = req.body || {};
 
   let existing = db.casinoApis.get(id);
   if (!existing) {
@@ -3290,6 +3644,15 @@ app.post('/api/v1/admin/casino-apis/:id', (req: Request, res: Response) => {
       secretKey: String(secretKey || '').trim(),
       seamlessWalletCallbackUrl: String(seamlessWalletCallbackUrl || '/api/v1/casino/seamless/callback').trim(),
       currency: String(currency || 'BDT').trim(),
+      authType: (authType || 'bearer') as any,
+      customHeaderName: String(customHeaderName || 'X-Api-Key').trim(),
+      gamesListEndpoint: String(gamesListEndpoint || '').trim(),
+      gamesListMethod: (gamesListMethod === 'POST' ? 'POST' : 'GET') as 'GET' | 'POST',
+      launchEndpoint: String(launchEndpoint || '').trim(),
+      launchMethod: (launchMethod || 'POST') as 'POST' | 'GET' | 'DIRECT_URL',
+      playerPrefix: String(playerPrefix !== undefined ? playerPrefix : 'fb88_').trim(),
+      webhookSecret: String(webhookSecret || '').trim(),
+      extraHeadersJson: String(extraHeadersJson || '').trim(),
       latencyMs: 0,
       lastPingAt: new Date().toISOString(),
       totalGamesIntegrated: 0,
@@ -3304,6 +3667,15 @@ app.post('/api/v1/admin/casino-apis/:id', (req: Request, res: Response) => {
     if (secretKey !== undefined) existing.secretKey = String(secretKey).trim();
     if (seamlessWalletCallbackUrl !== undefined) existing.seamlessWalletCallbackUrl = String(seamlessWalletCallbackUrl).trim();
     if (currency !== undefined) existing.currency = String(currency).trim();
+    if (authType !== undefined) existing.authType = authType;
+    if (customHeaderName !== undefined) existing.customHeaderName = String(customHeaderName).trim();
+    if (gamesListEndpoint !== undefined) existing.gamesListEndpoint = String(gamesListEndpoint).trim();
+    if (gamesListMethod !== undefined) existing.gamesListMethod = gamesListMethod === 'POST' ? 'POST' : 'GET';
+    if (launchEndpoint !== undefined) existing.launchEndpoint = String(launchEndpoint).trim();
+    if (launchMethod !== undefined) existing.launchMethod = launchMethod;
+    if (playerPrefix !== undefined) existing.playerPrefix = String(playerPrefix).trim();
+    if (webhookSecret !== undefined) existing.webhookSecret = String(webhookSecret).trim();
+    if (extraHeadersJson !== undefined) existing.extraHeadersJson = String(extraHeadersJson).trim();
     if (isEnabled !== undefined) existing.isEnabled = Boolean(isEnabled);
     existing.status = existing.isEnabled && existing.apiEndpoint ? 'CONNECTED' : 'DISCONNECTED';
     existing.lastPingAt = new Date().toISOString();
@@ -3343,46 +3715,22 @@ app.post('/api/v1/admin/casino-apis/:id/test', async (req: Request, res: Respons
   const api = db.casinoApis.get(req.params.id);
   if (!api) return res.status(404).json({ error: 'Casino API config not found' });
 
-  const startTime = Date.now();
-  let liveVerified = false;
-  let httpStatus = 0;
-
-  if (isSafeExternalUrl(api.apiEndpoint)) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4500);
-      const resp = await fetch(api.apiEndpoint, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Fb88baji-Live-Gateway/2.0',
-          ...(api.operatorCode ? { 'X-Operator-Code': api.operatorCode } : {}),
-          ...(api.secretKey ? { 'X-Api-Key': api.secretKey, Authorization: `Bearer ${api.secretKey}` } : {}),
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      httpStatus = resp.status;
-      liveVerified = resp.status < 500;
-    } catch {
-      liveVerified = false;
-    }
-  }
-
-  const latencyMs = Math.max(1, Date.now() - startTime);
-  api.latencyMs = latencyMs;
-  api.status = liveVerified ? 'CONNECTED' : 'DISCONNECTED';
+  const result = await pingExternalCasinoConnector(api);
+  api.latencyMs = result.latencyMs;
+  api.status = result.liveVerified ? 'CONNECTED' : 'DISCONNECTED';
   api.lastPingAt = new Date().toISOString();
   db.saveToDisk();
 
   res.json({
-    success: liveVerified,
+    success: result.liveVerified,
     status: api.status,
-    latencyMs,
-    httpStatus,
-    liveVerified,
-    pingMessage: liveVerified
-      ? `${api.name} গেটওয়ের সাথে HTTP হ্যান্ডশেক সফল! রেসপন্স টাইম: ${latencyMs}ms.`
-      : `${api.name} এন্ডপয়েন্ট যাচাই ব্যর্থ হয়েছে — বৈধ পাবলিক API URL ও Key পরীক্ষা করুন।`,
+    latencyMs: result.latencyMs,
+    httpStatus: result.httpStatus,
+    detectedGamesCount: result.detectedGamesCount,
+    liveVerified: result.liveVerified,
+    pingMessage: result.liveVerified
+      ? `${api.name} গেটওয়ে HTTP ${result.httpStatus} হ্যান্ডশেক সফল! (${result.latencyMs}ms${result.detectedGamesCount > 0 ? ` • ${result.detectedGamesCount}টি গেম শনাক্ত` : ''})`
+      : `${api.name} এন্ডপয়েন্ট যাচাই ব্যর্থ${result.errorDetail ? `: ${result.errorDetail}` : ' — API URL, Auth Method ও Key পরীক্ষা করুন।'}`,
     timestamp: api.lastPingAt,
   });
 });
@@ -3397,7 +3745,7 @@ app.post('/api/v1/admin/casino-apis/:id/sync-games', async (req: Request, res: R
 
   const { games: providedGames } = req.body || {};
   if (Array.isArray(providedGames) && providedGames.length > 0) {
-    const result = importExternalGamesFromArray(providedGames, 'ext', api.id);
+    const result = importExternalGamesFromArray(providedGames, 'ext', api.id, api.name);
     api.totalGamesIntegrated = db.games.filter((g) => g.apiProviderId === api.id).length;
     api.status = 'CONNECTED';
     api.lastPingAt = new Date().toISOString();
@@ -3411,51 +3759,68 @@ app.post('/api/v1/admin/casino-apis/:id/sync-games', async (req: Request, res: R
     });
   }
 
-  if (!isSafeExternalUrl(api.apiEndpoint)) {
+  const base = api.apiEndpoint.replace(/\/+$/, '');
+  const customEndpoint = api.gamesListEndpoint
+    ? resolveExternalEndpoint(base, api.gamesListEndpoint, '')
+    : '';
+  const candidateUrls = Array.from(
+    new Set(
+      [customEndpoint, base, `${base}/games`, `${base}/api/v1/games`, `${base}/game/list`, `${base}/v1/games`].filter(
+        Boolean
+      )
+    )
+  );
+
+  if (!candidateUrls.some((u) => isSafeExternalHttpUrl(u))) {
     return res.status(400).json({ error: 'বৈধ পাবলিক API Base URL সেট করুন অথবা JSON গেম ফিড ব্যবহার করুন।' });
   }
 
-  const base = api.apiEndpoint.replace(/\/+$/, '');
-  const candidateUrls = [base, `${base}/games`, `${base}/api/v1/games`, `${base}/game/list`];
+  const { headers, signedBody } = buildExternalApiRequest({
+    operatorCode: api.operatorCode,
+    secretKey: api.secretKey,
+    authType: api.authType || 'bearer',
+    customHeaderName: api.customHeaderName,
+    extraHeadersJson: api.extraHeadersJson,
+    payload: { currency: api.currency || 'BDT' },
+  });
+
+  const methodsToTry: Array<'GET' | 'POST'> =
+    api.gamesListMethod === 'POST' ? ['POST', 'GET'] : ['GET', 'POST'];
+
   let importedResult: { addedCount: number; updatedCount: number } | null = null;
 
   for (const url of candidateUrls) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
-      const resp = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Fb88baji-Live-Gateway/2.0',
-          ...(api.operatorCode ? { 'X-Operator-Code': api.operatorCode } : {}),
-          ...(api.secretKey ? { 'X-Api-Key': api.secretKey, Authorization: `Bearer ${api.secretKey}` } : {}),
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      if (resp.ok) {
-        const data = (await resp.json().catch(() => null)) as any;
-        const rawList = Array.isArray(data?.data)
-          ? data.data
-          : Array.isArray(data?.games)
-          ? data.games
-          : Array.isArray(data)
-          ? data
-          : [];
-        if (rawList.length > 0) {
-          const imported = importExternalGamesFromArray(rawList, 'ext', api.id);
-          importedResult = { addedCount: imported.addedCount, updatedCount: imported.updatedCount };
-          break;
+    if (!isSafeExternalHttpUrl(url)) continue;
+    for (const method of methodsToTry) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 6000);
+        const resp = await fetch(url, {
+          method,
+          headers,
+          ...(method === 'POST' ? { body: JSON.stringify(signedBody) } : {}),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        if (resp.ok) {
+          const data = (await resp.json().catch(() => null)) as any;
+          const rawList = extractGamesArray(data);
+          if (rawList.length > 0) {
+            const imported = importExternalGamesFromArray(rawList, 'ext', api.id, api.name);
+            importedResult = { addedCount: imported.addedCount, updatedCount: imported.updatedCount };
+            break;
+          }
         }
+      } catch {
+        // try next method / url
       }
-    } catch {
-      // try next path
     }
+    if (importedResult) break;
   }
 
   if (!importedResult) {
     return res.status(502).json({
-      error: `${api.name} এন্ডপয়েন্ট থেকে কোনো গেম অ্যারে (games/data JSON) পাওয়া যায়নি।`,
+      error: `${api.name} এন্ডপয়েন্ট থেকে কোনো গেম অ্যারে (games/data/list JSON) পাওয়া যায়নি। Games List Path বা JSON Importer ব্যবহার করুন।`,
     });
   }
 
@@ -3686,6 +4051,585 @@ app.post('/api/v1/casino/crash/chat', (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// ADMIN CRASH ENGINE RISK & RTP CONFIGURATION
+// ---------------------------------------------------------------------------
+app.get('/api/v1/admin/crash/config', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+  res.json({ success: true, config: db.crashConfig });
+});
+
+app.post('/api/v1/admin/crash/config', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+
+  const instantCrashPercent = Math.max(1, Math.min(35, Number(req.body?.instantCrashPercent ?? db.crashConfig.instantCrashPercent)));
+  const houseEdgePercent = Math.max(1, Math.min(25, Number(req.body?.houseEdgePercent ?? db.crashConfig.houseEdgePercent)));
+  const maxMultiplier = Math.max(5, Math.min(200, Number(req.body?.maxMultiplier ?? db.crashConfig.maxMultiplier)));
+
+  db.crashConfig = { instantCrashPercent, houseEdgePercent, maxMultiplier };
+  db.auditLogs.unshift({
+    id: `aud_${Date.now()}`,
+    actor: admin.username,
+    action: 'CRASH_CONFIG_UPDATED',
+    target: 'aviator_crash',
+    timestamp: new Date().toISOString(),
+    metadata: db.crashConfig,
+  });
+  db.saveToDisk();
+
+  res.json({
+    success: true,
+    config: db.crashConfig,
+    message: 'অ্যাভিয়েটর ক্র্যাশ রিস্ক ও RTP সেটিংস সফলভাবে আপডেট হয়েছে।',
+  });
+});
+
+// ---------------------------------------------------------------------------
+// REWARD HUB, RESCUE FUND, DAILY SIGN-IN (2 PLANS), VOUCHERS, PROMO CODES & SUGGESTIONS
+// ---------------------------------------------------------------------------
+function computeUserActivityMetrics(user: User) {
+  const todayBdt = getBdtDateString();
+  const toBdtDay = (iso?: string) => {
+    if (!iso) return '';
+    const ms = new Date(iso).getTime();
+    if (!Number.isFinite(ms)) return '';
+    return getBdtDateString(new Date(ms));
+  };
+
+  const userDeposits = Array.from(db.deposits.values()).filter(
+    (d) => d.userId === user.id && d.status === 'SUCCEEDED'
+  );
+  const totalDepositsPaisa = userDeposits.reduce((s, d) => s + (d.amountPaisa || 0), 0);
+  const todayDepositsPaisa = userDeposits
+    .filter((d) => toBdtDay(d.completedAt || d.createdAt) === todayBdt)
+    .reduce((s, d) => s + (d.amountPaisa || 0), 0);
+
+  const userBets = Array.from(db.bets.values()).filter((b) => b.userId === user.id);
+  const todayBets = userBets.filter((b) => toBdtDay(b.placedAt || (b as any).createdAt) === todayBdt);
+  const todayBetPaisa = todayBets.reduce((s, b) => s + (b.stakePaisa || 0), 0);
+  const todayPayoutPaisa = todayBets
+    .filter((b) => b.status === 'WON')
+    .reduce((s, b) => s + (b.payoutPaisa || 0), 0);
+
+  const todayNetLossTk = Math.max(0, Number(((todayBetPaisa - todayPayoutPaisa) / 100).toFixed(2)));
+  let rescueRate = 0;
+  if (todayNetLossTk >= 10000) rescueRate = 0.08;
+  else if (todayNetLossTk >= 5000) rescueRate = 0.05;
+  else if (todayNetLossTk >= 1000) rescueRate = 0.03;
+  else if (todayNetLossTk >= 200) rescueRate = 0.02;
+
+  const rescueClaimedToday = (user.claimedRescueDates || []).includes(todayBdt);
+  const rescueClaimableTk = rescueClaimedToday ? 0 : Math.floor(todayNetLossTk * rescueRate);
+
+  const totalDepositsTk = Number((totalDepositsPaisa / 100).toFixed(2));
+  const todayDepositsTk = Number((todayDepositsPaisa / 100).toFixed(2));
+  const todayBetTk = Number((todayBetPaisa / 100).toFixed(2));
+
+  // VIP tier calculation from lifetime turnover / deposits
+  const totalTurnoverTk = (user.turnoverPaisa || 0) / 100;
+  let vipTierNum = 1;
+  if (totalDepositsTk >= 100000 || totalTurnoverTk >= 500000) vipTierNum = 5;
+  else if (totalDepositsTk >= 30000 || totalTurnoverTk >= 150000) vipTierNum = 4;
+  else if (totalDepositsTk >= 10000 || totalTurnoverTk >= 50000) vipTierNum = 3;
+  else if (totalDepositsTk >= 2000 || totalTurnoverTk >= 10000) vipTierNum = 2;
+
+  const vipProgress = vipTierNum >= 5 ? 2 : Math.min(2, Math.floor((totalDepositsTk % 2000) / 1000) + (totalDepositsTk >= 1000 ? 1 : 0));
+
+  // BDT midnight countdown
+  const nowUtcMs = Date.now();
+  const bdtNowMs = nowUtcMs + 6 * 3600 * 1000;
+  const bdtDate = new Date(bdtNowMs);
+  const bdtNextMidnightMs = Date.UTC(bdtDate.getUTCFullYear(), bdtDate.getUTCMonth(), bdtDate.getUTCDate() + 1) - 6 * 3600 * 1000;
+  const dailyDueAtIso = new Date(bdtNextMidnightMs).toISOString();
+
+  const createdMs = new Date(user.createdAt || nowUtcMs).getTime();
+  const tenDayWindowEnd = new Date(createdMs + 10 * 86400 * 1000);
+  const rechargeDueMs = tenDayWindowEnd.getTime() > nowUtcMs ? tenDayWindowEnd.getTime() : nowUtcMs + 9 * 86400 * 1000 + 6 * 3600 * 1000;
+  const rechargeDueAtIso = new Date(rechargeDueMs).toISOString();
+
+  const dailyEggClaimedToday = user.claimedVouchers?.daily_egg === todayBdt;
+  const depositBonusClaimed = Boolean(user.claimedVouchers?.deposit_bonus);
+  const luckySpinClaimedToday = user.claimedVouchers?.lucky_spin_bonus === todayBdt;
+  const rechargeEggClaimed = Boolean(user.claimedVouchers?.recharge_30k_egg);
+
+  const vouchers = [
+    {
+      id: 'deposit_bonus' as const,
+      badgeLabel: 'Deposit Bonus',
+      category: 'deposit' as const,
+      titleBn: 'প্রথম ডিপোজিট ও রিচার্জ বোনাস — ২৯৯% পর্যন্ত',
+      subtitleBn: 'ন্যূনতম ৳২০০ ডিপোজিট করে তাৎক্ষণিক ডিপোজিট বোনাস (৳২৯ - ৳২৯৯) ক্লেইম করুন।',
+      dueDateStr: todayBdt.replace(/-/g, '.'),
+      dueAtIso: dailyDueAtIso,
+      eligible: totalDepositsTk >= 200,
+      claimed: depositBonusClaimed,
+      currentTk: totalDepositsTk,
+      requiredTk: 200,
+      conditionTextBn: `আপনার বর্তমান মোট ডিপোজিট ৳${totalDepositsTk.toLocaleString()}। কমপক্ষে ৳২০০ সফল ডিপোজিট থাকলে ডিপোজিট বোনাস ক্লেইম করতে পারবেন (৩x টার্নওভার)।`,
+    },
+    {
+      id: 'lucky_spin_bonus' as const,
+      badgeLabel: 'Lucky Spin',
+      category: 'spin' as const,
+      titleBn: 'ডেইলি লাকি স্পিন বোনাস — ফ্রি স্পিন ও ক্যাশ',
+      subtitleBn: 'আজ ৳৫০০ ডিপোজিট বা ৳১,০০০ বেট পূর্ণ করে ডেইলি স্পিন বোনাস (৳১৮ - ৳১৮৮) জিতুন।',
+      dueDateStr: todayBdt.replace(/-/g, '.'),
+      dueAtIso: dailyDueAtIso,
+      eligible: todayDepositsTk >= 500 || todayBetTk >= 1000,
+      claimed: luckySpinClaimedToday,
+      currentTk: Math.max(todayDepositsTk, todayBetTk),
+      requiredTk: 500,
+      conditionTextBn: `আজকের ডিপোজিট ৳${todayDepositsTk.toLocaleString()} এবং আজকের বেট ৳${todayBetTk.toLocaleString()}। ৳৫০০ ডিপোজিট বা ৳১,০০০ বেটিং করলে প্রতিদিন স্পিন বোনাস ক্লেইম করতে পারবেন।`,
+    },
+    {
+      id: 'daily_egg' as const,
+      badgeLabel: 'Smash & Win',
+      category: 'egg' as const,
+      titleBn: 'সোনার ডিম ভাঙতে প্রতিদিন লগইন করুন',
+      subtitleBn: 'প্রতিদিন লগইন করে সোনার ডিম ভাঙুন এবং নিশ্চিত ক্যাশ বোনাস জিতুন (৳৫ - ৳৯৯)।',
+      dueDateStr: todayBdt.replace(/-/g, '.'),
+      dueAtIso: dailyDueAtIso,
+      eligible: true,
+      claimed: dailyEggClaimedToday,
+      currentTk: todayDepositsTk,
+      requiredTk: 0,
+      conditionTextBn: 'প্রতিদিন অন্তত ১ বার একাউন্টে লগইন করলে সোনার ডিম ভাঙ্গার সুযোগ পাবেন। বোনাস ৩x টার্নওভার প্রযোজ্য।',
+    },
+    {
+      id: 'recharge_30k_egg' as const,
+      badgeLabel: 'Smash & Win',
+      category: 'egg' as const,
+      titleBn: 'মোট রিচার্জ ৩০,০০০এ পৌঁছেছে, সোনার ডিম ভাঙুন',
+      subtitleBn: 'সর্বমোট ডিপোজিট ৳৩০,০০০ পূর্ণ হলেই স্পেশাল সোনার ডিম ভেঙে ৳২৯৯ - ৳৯৯৯ জিতুন।',
+      dueDateStr: getBdtDateString(new Date(rechargeDueMs)).replace(/-/g, '.'),
+      dueAtIso: rechargeDueAtIso,
+      eligible: totalDepositsTk >= 30000,
+      claimed: rechargeEggClaimed,
+      currentTk: totalDepositsTk,
+      requiredTk: 30000,
+      conditionTextBn: `আপনার বর্তমান মোট ডিপোজিট ৳${totalDepositsTk.toLocaleString()}। ৳৩০,০০০ পূর্ণ হলে সাথে সাথে বোনাস ক্লেইম করতে পারবেন।`,
+    },
+  ];
+
+  const availableVouchersCount = vouchers.filter((v) => !v.claimed).length;
+
+  return {
+    todayBdt,
+    todayDepositsTk,
+    totalDepositsTk,
+    todayBetTk,
+    todayPayoutTk: Number((todayPayoutPaisa / 100).toFixed(2)),
+    todayNetLossTk,
+    rescueClaimableTk,
+    rescueClaimedToday,
+    rescueRatePercent: Math.round(rescueRate * 100),
+    growthPlan: {
+      minDepositTk: 200,
+      checkedInToday: user.lastSignInDate === todayBdt,
+      streak: (user.growthDaysClaimed || []).length,
+      totalBonusTk: Number((user.signInTotalBonusTk || 0).toFixed(2)),
+      claimedDays: user.growthDaysClaimed || [],
+      rewards: [1, 2, 5, 8, 12, 18, 30],
+    },
+    luckySpinPlan: {
+      minDepositTk: 1000,
+      requiredBetTk: 15000,
+      checkedInToday: user.lastLuckySpinDate === todayBdt,
+      claimedDays: user.luckySpinDaysClaimed || [],
+      tiers: ['ব্রোঞ্জ স্পিন', 'সিলভার স্পিন', 'গোল্ডেন স্পিন', 'প্লাটিনাম স্পিন', 'ডায়মন্ড স্পিন'],
+    },
+    vouchers,
+    availableVouchersCount,
+    vip: {
+      level: user.vipLevel || `VIP ${vipTierNum}`,
+      tierNum: vipTierNum,
+      progress: user.vipProgress ?? vipProgress,
+      target: user.vipTarget ?? 2,
+      depositProgressTk: totalDepositsTk,
+    },
+    points: user.points ?? Math.floor((user.turnoverPaisa || 0) / 1000),
+  };
+}
+
+app.get('/api/v1/activity/overview', (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const wallet = db.wallets.get(user.id);
+  const overview = computeUserActivityMetrics(user);
+  res.json({
+    success: true,
+    user,
+    wallet,
+    overview,
+  });
+});
+
+app.post('/api/v1/activity/rescue/claim', async (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (user.isWalletFrozen) {
+    return res.status(403).json({ error: 'সিকিউরিটি কারণে ওয়ালেট ফ্রিজ রয়েছে।' });
+  }
+
+  const metrics = computeUserActivityMetrics(user);
+  if (metrics.rescueClaimedToday) {
+    return res.status(400).json({ error: 'আজকের রেসকিউ ফান্ড ইতিমধ্যে ক্লেইম করা হয়েছে।' });
+  }
+  if (metrics.rescueClaimableTk <= 0) {
+    return res.status(400).json({ error: 'রেসকিউ ফান্ডের জন্য আজ কমপক্ষে ৳২০০ নেট লস থাকতে হবে।' });
+  }
+
+  const amountPaisa = Math.round(metrics.rescueClaimableTk * 100);
+  const refId = `rescue_${user.id}_${metrics.todayBdt}`;
+  await ledger.grantBonus(user.id, refId, amountPaisa, `Rescue Fund Cashback (${metrics.rescueRatePercent}%)`);
+  const wallet = db.wallets.get(user.id);
+  if (wallet) {
+    wallet.bonusPaisa += amountPaisa;
+    wallet.wageringRequirementPaisa = (wallet.wageringRequirementPaisa || 0) + amountPaisa;
+  }
+  if (!user.claimedRescueDates) user.claimedRescueDates = [];
+  user.claimedRescueDates.push(metrics.todayBdt);
+
+  db.recordPlayerActivity({
+    userId: user.id,
+    username: user.username,
+    actionType: 'BONUS_CLAIM',
+    amountTk: metrics.rescueClaimableTk,
+    ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.ip || '',
+  });
+  db.saveToDisk();
+
+  res.json({
+    success: true,
+    claimedTk: metrics.rescueClaimableTk,
+    wallet,
+    message: `অভিনন্দন! ৳${metrics.rescueClaimableTk.toFixed(2)} রেসকিউ ফান্ড ওয়ালেটে জমা হয়েছে!`,
+  });
+});
+
+app.post('/api/v1/activity/checkin', async (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (user.isWalletFrozen) {
+    return res.status(403).json({ error: 'সিকিউরিটি কারণে ওয়ালেট ফ্রিজ রয়েছে।' });
+  }
+
+  const plan = req.body?.plan === 'spin' ? 'spin' : 'growth';
+  const metrics = computeUserActivityMetrics(user);
+
+  if (plan === 'growth') {
+    if (metrics.growthPlan.checkedInToday) {
+      return res.status(400).json({ error: 'আজকের সাইন ইন ইতিমধ্যে সম্পন্ন হয়েছে।' });
+    }
+    if (metrics.todayDepositsTk < metrics.growthPlan.minDepositTk) {
+      return res.status(200).json({
+        success: false,
+        eligible: false,
+        currentBetTk: metrics.todayBetTk,
+        requiredBetTk: 0,
+        currentDepositTk: metrics.todayDepositsTk,
+        requiredDepositTk: metrics.growthPlan.minDepositTk,
+        error: 'Complete the requirement to receive the reward',
+      });
+    }
+
+    const claimed = user.growthDaysClaimed || [];
+    const nextDay = claimed.length >= 7 ? 1 : claimed.length + 1;
+    const nextDays = claimed.length >= 7 ? [1] : [...claimed, nextDay];
+    const rewardTk = metrics.growthPlan.rewards[nextDay - 1] || 1;
+    const rewardPaisa = Math.round(rewardTk * 100);
+
+    await ledger.grantBonus(user.id, `signin_growth_${metrics.todayBdt}_d${nextDay}`, rewardPaisa, `Daily Sign-In Growth Day ${nextDay}`);
+    const wallet = db.wallets.get(user.id);
+    if (wallet) {
+      wallet.bonusPaisa += rewardPaisa;
+      wallet.wageringRequirementPaisa = (wallet.wageringRequirementPaisa || 0) + rewardPaisa * 3;
+    }
+
+    user.growthDaysClaimed = nextDays;
+    user.lastSignInDate = metrics.todayBdt;
+    user.signInStreak = nextDays.length;
+    user.signInTotalBonusTk = Number(((user.signInTotalBonusTk || 0) + rewardTk).toFixed(2));
+    user.points = (user.points || 0) + 10;
+
+    db.saveToDisk();
+    return res.json({
+      success: true,
+      eligible: true,
+      day: nextDay,
+      rewardTk,
+      wallet,
+      message: `অভিনন্দন! Day ${nextDay} সাইন ইন বোনাস ৳${rewardTk.toFixed(2)} ওয়ালেটে যুক্ত হয়েছে!`,
+    });
+  } else {
+    // Lucky Spin Plan
+    if (metrics.luckySpinPlan.checkedInToday) {
+      return res.status(400).json({ error: 'আজকের লাকি স্পিন সাইন ইন ইতিমধ্যে সম্পন্ন হয়েছে।' });
+    }
+    if (metrics.todayDepositsTk < metrics.luckySpinPlan.minDepositTk || metrics.todayBetTk < metrics.luckySpinPlan.requiredBetTk) {
+      return res.status(200).json({
+        success: false,
+        eligible: false,
+        currentBetTk: metrics.todayBetTk,
+        requiredBetTk: metrics.luckySpinPlan.requiredBetTk,
+        currentDepositTk: metrics.todayDepositsTk,
+        requiredDepositTk: metrics.luckySpinPlan.minDepositTk,
+        error: 'Complete the requirement to receive the reward',
+      });
+    }
+
+    const claimed = user.luckySpinDaysClaimed || [];
+    const nextDay = claimed.length >= 5 ? 1 : claimed.length + 1;
+    const nextDays = claimed.length >= 5 ? [1] : [...claimed, nextDay];
+    const prizePool = [28, 38, 58, 88, 128, 188];
+    const rewardTk = prizePool[crypto.randomInt(0, prizePool.length)] + (nextDay - 1) * 10;
+    const rewardPaisa = Math.round(rewardTk * 100);
+
+    await ledger.grantBonus(user.id, `signin_spin_${metrics.todayBdt}_d${nextDay}`, rewardPaisa, `Lucky Spin Day ${nextDay} Reward`);
+    const wallet = db.wallets.get(user.id);
+    if (wallet) {
+      wallet.bonusPaisa += rewardPaisa;
+      wallet.wageringRequirementPaisa = (wallet.wageringRequirementPaisa || 0) + rewardPaisa * 3;
+    }
+
+    user.luckySpinDaysClaimed = nextDays;
+    user.lastLuckySpinDate = metrics.todayBdt;
+    user.signInTotalBonusTk = Number(((user.signInTotalBonusTk || 0) + rewardTk).toFixed(2));
+    user.points = (user.points || 0) + 25;
+
+    db.saveToDisk();
+    return res.json({
+      success: true,
+      eligible: true,
+      day: nextDay,
+      rewardTk,
+      wallet,
+      message: `🎉 ভাগ্যবান স্পিনে আপনি ৳${rewardTk} বোনাস জিতেছেন!`,
+    });
+  }
+});
+
+app.post('/api/v1/activity/voucher/claim', async (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (user.isWalletFrozen) {
+    return res.status(403).json({ error: 'সিকিউরিটি কারণে ওয়ালেট ফ্রিজ রয়েছে।' });
+  }
+
+  const allowedIds = ['daily_egg', 'recharge_30k_egg', 'deposit_bonus', 'lucky_spin_bonus'] as const;
+  const rawId = String(req.body?.voucherId || 'daily_egg');
+  const voucherId = (allowedIds as readonly string[]).includes(rawId)
+    ? (rawId as (typeof allowedIds)[number])
+    : 'daily_egg';
+
+  const metrics = computeUserActivityMetrics(user);
+  const voucher = metrics.vouchers.find((v) => v.id === voucherId);
+  if (!voucher) return res.status(404).json({ error: 'Voucher not found' });
+
+  if (voucher.claimed) {
+    return res.status(400).json({ error: 'এই ভাউচারটি ইতিমধ্যে ক্লেইম করা হয়েছে।' });
+  }
+  if (!voucher.eligible) {
+    return res.status(200).json({
+      success: false,
+      eligible: false,
+      currentBetTk: metrics.todayBetTk,
+      requiredBetTk: voucherId === 'lucky_spin_bonus' ? 1000 : 0,
+      currentDepositTk: voucherId === 'lucky_spin_bonus' ? metrics.todayDepositsTk : metrics.totalDepositsTk,
+      requiredDepositTk: voucher.requiredTk,
+      error:
+        voucherId === 'deposit_bonus'
+          ? 'প্রথম ডিপোজিট বোনাস পেতে কমপক্ষে ৳২০০ ডিপোজিট করুন।'
+          : voucherId === 'lucky_spin_bonus'
+          ? 'ডেইলি লাকি স্পিন বোনাস পেতে আজ কমপক্ষে ৳৫০০ ডিপোজিট বা ৳১,০০০ বেট করুন।'
+          : `মোট রিচার্জ ৳${voucher.requiredTk.toLocaleString()} পূর্ণ হলে এই সোনার ডিম ভাঙতে পারবেন।`,
+    });
+  }
+
+  const prizeTk =
+    voucherId === 'recharge_30k_egg'
+      ? [299, 399, 599, 888][crypto.randomInt(0, 4)]
+      : voucherId === 'deposit_bonus'
+      ? Math.min(299, Math.max(29, Math.round(metrics.totalDepositsTk * 0.15)))
+      : voucherId === 'lucky_spin_bonus'
+      ? [18, 28, 58, 88, 128, 188][crypto.randomInt(0, 6)]
+      : [5, 9, 15, 29, 49][crypto.randomInt(0, 5)];
+  const prizePaisa = prizeTk * 100;
+
+  await ledger.grantBonus(user.id, `voucher_${voucherId}_${metrics.todayBdt}_${Date.now()}`, prizePaisa, `Bonus Voucher (${voucherId})`);
+  const wallet = db.wallets.get(user.id);
+  if (wallet) {
+    wallet.bonusPaisa += prizePaisa;
+    wallet.wageringRequirementPaisa = (wallet.wageringRequirementPaisa || 0) + prizePaisa * 3;
+  }
+
+  if (!user.claimedVouchers) user.claimedVouchers = {};
+  user.claimedVouchers[voucherId] = metrics.todayBdt;
+  db.recordPlayerActivity({
+    userId: user.id,
+    username: user.username,
+    actionType: 'BONUS_CLAIM',
+    amountTk: prizeTk,
+    ip: (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() || req.ip || '',
+  });
+  db.saveToDisk();
+
+  res.json({
+    success: true,
+    eligible: true,
+    voucherId,
+    prizeTk,
+    wallet,
+    message:
+      voucherId === 'deposit_bonus'
+        ? `🎉 অভিনন্দন! ৳${prizeTk} ডিপোজিট বোনাস আপনার ওয়ালেটে যোগ হয়েছে!`
+        : voucherId === 'lucky_spin_bonus'
+        ? `🎡 দারুণ! লাকি স্পিন বোনাস ৳${prizeTk} আপনার ওয়ালেটে যোগ হয়েছে!`
+        : `🥚 অভিনন্দন! সোনার ডিম ভেঙে আপনি ৳${prizeTk} বোনাস জিতেছেন!`,
+  });
+});
+
+app.post('/api/v1/activity/promo/redeem', async (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  if (user.isWalletFrozen) {
+    return res.status(403).json({ error: 'সিকিউরিটি কারণে ওয়ালেট ফ্রিজ রয়েছে।' });
+  }
+
+  const rawCode = String(req.body?.code || '').trim().toUpperCase();
+  if (!rawCode) return res.status(400).json({ error: 'প্রোমো কোড লিখুন।' });
+
+  const promo = db.promoCodes.find((p) => p.code.toUpperCase() === rawCode);
+  if (!promo || !promo.active) {
+    return res.status(404).json({ error: 'অবৈধ বা মেয়াদোত্তীর্ণ প্রোমো কোড।' });
+  }
+  if (promo.expiresAt && new Date(promo.expiresAt).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'এই প্রোমো কোডের মেয়াদ শেষ হয়ে গেছে।' });
+  }
+  if (promo.usedCount >= promo.maxUses) {
+    return res.status(400).json({ error: 'এই প্রোমো কোডের সর্বোচ্চ ব্যবহার সীমা শেষ হয়েছে।' });
+  }
+  if ((promo.usedByUserIds || []).includes(user.id) || (user.redeemedPromoCodes || []).includes(promo.code)) {
+    return res.status(400).json({ error: 'আপনি ইতিমধ্যে এই প্রোমো কোডটি ব্যবহার করেছেন।' });
+  }
+
+  const metrics = computeUserActivityMetrics(user);
+  if (promo.minDepositTk > 0 && metrics.totalDepositsTk < promo.minDepositTk) {
+    return res.status(400).json({
+      error: `এই কোডটির জন্য সর্বনিম্ন ৳${promo.minDepositTk.toLocaleString()} সফল ডিপোজিট প্রয়োজন।`,
+    });
+  }
+
+  const rewardPaisa = Math.round(promo.rewardTk * 100);
+  await ledger.grantBonus(user.id, `promo_${promo.id}_${Date.now()}`, rewardPaisa, `Promo Code Redeemed (${promo.code})`);
+  const wallet = db.wallets.get(user.id);
+  if (wallet) {
+    wallet.bonusPaisa += rewardPaisa;
+    wallet.wageringRequirementPaisa = (wallet.wageringRequirementPaisa || 0) + rewardPaisa * 3;
+  }
+
+  promo.usedCount += 1;
+  if (!promo.usedByUserIds) promo.usedByUserIds = [];
+  promo.usedByUserIds.push(user.id);
+  if (!user.redeemedPromoCodes) user.redeemedPromoCodes = [];
+  user.redeemedPromoCodes.push(promo.code);
+  db.saveToDisk();
+
+  res.json({
+    success: true,
+    rewardTk: promo.rewardTk,
+    wallet,
+    message: `🎟️ প্রোমো কোড "${promo.code}" সফল! ৳${promo.rewardTk} ওয়ালেটে যুক্ত হয়েছে।`,
+  });
+});
+
+app.get('/api/v1/admin/promo-codes', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+  res.json({ success: true, promoCodes: db.promoCodes });
+});
+
+app.post('/api/v1/admin/promo-codes', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+
+  const code = String(req.body?.code || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+  const rewardTk = Math.max(1, Number(req.body?.rewardTk || 0));
+  const minDepositTk = Math.max(0, Number(req.body?.minDepositTk || 0));
+  const maxUses = Math.max(1, Number(req.body?.maxUses || 100));
+  const expiresDays = Math.max(1, Number(req.body?.expiresDays || 30));
+
+  if (!code || code.length < 3) {
+    return res.status(400).json({ error: 'Valid promo code (min 3 characters) required' });
+  }
+  if (db.promoCodes.some((p) => p.code.toUpperCase() === code)) {
+    return res.status(400).json({ error: 'Promo code already exists' });
+  }
+
+  const item = {
+    id: `promo_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`,
+    code,
+    rewardTk,
+    minDepositTk,
+    maxUses,
+    usedCount: 0,
+    usedByUserIds: [],
+    expiresAt: new Date(Date.now() + expiresDays * 86400 * 1000).toISOString(),
+    active: true,
+    createdAt: new Date().toISOString(),
+  };
+  db.promoCodes.unshift(item);
+  db.saveToDisk();
+
+  res.status(201).json({ success: true, promoCode: item });
+});
+
+app.delete('/api/v1/admin/promo-codes/:id', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+  const before = db.promoCodes.length;
+  db.promoCodes = db.promoCodes.filter((p) => p.id !== req.params.id);
+  if (db.promoCodes.length === before) return res.status(404).json({ error: 'Promo code not found' });
+  db.saveToDisk();
+  res.json({ success: true });
+});
+
+app.post('/api/v1/user/suggestions', (req: Request, res: Response) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) return res.status(401).json({ error: 'Not authenticated' });
+  const category = String(req.body?.category || 'General').trim().slice(0, 60);
+  const message = String(req.body?.message || '').trim().slice(0, 1000);
+  if (message.length < 5) {
+    return res.status(400).json({ error: 'অনুগ্রহ করে অন্তত ৫ অক্ষরের বিস্তারিত মতামত লিখুন।' });
+  }
+
+  const item = {
+    id: `sug_${Date.now()}_${crypto.randomBytes(2).toString('hex')}`,
+    userId: user.id,
+    username: user.username,
+    category,
+    message,
+    status: 'NEW' as const,
+    createdAt: new Date().toISOString(),
+  };
+  db.suggestions.unshift(item);
+  db.saveToDisk();
+
+  res.status(201).json({
+    success: true,
+    suggestion: item,
+    message: 'আপনার মূল্যবান মতামত সফলভাবে গ্রহণ করা হয়েছে। ধন্যবাদ!',
+  });
+});
+
+app.get('/api/v1/admin/suggestions', (req: Request, res: Response) => {
+  const admin = getAuthenticatedUser(req);
+  if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
+  res.json({ success: true, suggestions: db.suggestions });
+});
+
 // 5. Add New Real Game to Platform
 app.post('/api/v1/admin/games', (req: Request, res: Response) => {
   const admin = getAuthenticatedUser(req);
@@ -3810,7 +4754,7 @@ app.post('/api/v1/admin/games/import', async (req: Request, res: Response) => {
   const admin = getAuthenticatedUser(req);
   if (!admin || admin.role !== 'admin') return res.status(403).json({ error: 'Admin required' });
 
-  const { feedUrl, apiKey, operatorCode, games, apiProviderId = 'custom_api' } = req.body || {};
+  const { feedUrl, apiKey, operatorCode, method = 'GET', authType = 'bearer', games, apiProviderId = 'custom_api' } = req.body || {};
 
   if (Array.isArray(games) && games.length > 0) {
     const result = importExternalGamesFromArray(games, 'ext', apiProviderId);
@@ -3828,15 +4772,19 @@ app.post('/api/v1/admin/games/import', async (req: Request, res: Response) => {
   }
 
   try {
+    const { headers, signedBody } = buildExternalApiRequest({
+      operatorCode,
+      secretKey: apiKey,
+      authType,
+      payload: { currency: 'BDT' },
+    });
+    const reqMethod = String(method).toUpperCase() === 'POST' ? 'POST' : 'GET';
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     const resp = await fetch(feedUrl, {
-      method: 'GET',
-      headers: {
-        'User-Agent': 'Fb88baji-Game-Importer/2.0',
-        ...(apiKey ? { 'X-Api-Key': apiKey, Authorization: `Bearer ${apiKey}` } : {}),
-        ...(operatorCode ? { 'X-Operator-Code': operatorCode } : {}),
-      },
+      method: reqMethod,
+      headers,
+      ...(reqMethod === 'POST' ? { body: JSON.stringify(signedBody) } : {}),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -3844,15 +4792,9 @@ app.post('/api/v1/admin/games/import', async (req: Request, res: Response) => {
       return res.status(502).json({ error: `এক্সটার্নাল API থেকে HTTP ${resp.status} পাওয়া গেছে।` });
     }
     const payload = (await resp.json()) as any;
-    const rawList = Array.isArray(payload?.data)
-      ? payload.data
-      : Array.isArray(payload?.games)
-      ? payload.games
-      : Array.isArray(payload)
-      ? payload
-      : [];
+    const rawList = extractGamesArray(payload);
     if (rawList.length === 0) {
-      return res.status(400).json({ error: 'উক্ত API URL থেকে কোনো গেমের তালিকা (data/games array) পাওয়া যায়নি।' });
+      return res.status(400).json({ error: 'উক্ত API URL থেকে কোনো গেমের তালিকা (data/games/list array) পাওয়া যায়নি।' });
     }
     const result = importExternalGamesFromArray(rawList, 'ext', apiProviderId);
     return res.json({
@@ -3889,42 +4831,145 @@ app.delete('/api/v1/admin/games/external', (req: Request, res: Response) => {
 });
 
 // -------------------------------------------------------------
-// SEAMLESS WALLET API (iGaming Provider Aggregator Callback)
+// SEAMLESS WALLET API (Universal iGaming Provider Aggregator Callback)
 // -------------------------------------------------------------
 
-// Unified Seamless Wallet Webhook Callback (supports action: balance | bet | settle | win | rollback)
-app.post('/api/v1/casino/seamless/callback', async (req: Request, res: Response) => {
-  const payload = req.body || {};
-  const action = String(payload.action || 'balance').toLowerCase();
-  const targetAccount = String(payload.username || payload.member_account || payload.operator_member_id || payload.userId || '').trim();
+function getConfiguredWebhookSecrets(): string[] {
+  const secrets: string[] = [];
+  if (db.liveGatewayConfig.apiSecret) secrets.push(db.liveGatewayConfig.apiSecret);
+  for (const api of db.casinoApis.values()) {
+    if (api.webhookSecret) secrets.push(api.webhookSecret);
+    else if (api.secretKey) secrets.push(api.secretKey);
+  }
+  return secrets;
+}
 
-  let targetUser = db.users.get(targetAccount);
-  if (!targetUser && targetAccount) {
-    for (const u of db.users.values()) {
-      if (u.username === targetAccount || u.id === targetAccount || `fb88_${u.username}` === targetAccount) {
-        targetUser = u;
-        break;
-      }
+function resolveSeamlessPlayer(payload: Record<string, any>): User | null {
+  const tokenCandidate = String(payload.token || payload.sessionToken || payload.session_id || payload.launchToken || '').trim();
+  if (tokenCandidate) {
+    const launchInfo = db.launchTokens.get(tokenCandidate);
+    if (launchInfo && launchInfo.expiresAt > Date.now()) {
+      const tokenUser = db.users.get(launchInfo.userId);
+      if (tokenUser) return tokenUser;
     }
   }
-  if (!targetUser) return res.status(404).json({ code: 1, status: 'USER_NOT_FOUND', balance: 0 });
 
+  const rawAccount = String(
+    payload.userId ||
+      payload.user_id ||
+      payload.username ||
+      payload.account ||
+      payload.member_account ||
+      payload.operator_member_id ||
+      payload.player_id ||
+      payload.playerId ||
+      payload.user ||
+      ''
+  ).trim();
+  if (!rawAccount) return null;
+
+  const direct = db.users.get(rawAccount);
+  if (direct) return direct;
+
+  const prefixes = new Set<string>(['fb88_']);
+  if (db.liveGatewayConfig.playerPrefix) prefixes.add(db.liveGatewayConfig.playerPrefix);
+  for (const api of db.casinoApis.values()) {
+    if (api.playerPrefix) prefixes.add(api.playerPrefix);
+  }
+
+  const rawLower = rawAccount.toLowerCase();
+  let stripped = rawAccount;
+  for (const p of prefixes) {
+    if (p && rawLower.startsWith(p.toLowerCase())) {
+      stripped = rawAccount.slice(p.length);
+      break;
+    }
+  }
+  const strippedLower = stripped.toLowerCase();
+
+  for (const u of db.users.values()) {
+    const unameLower = u.username.toLowerCase();
+    if (unameLower === rawLower || unameLower === strippedLower || u.id === rawAccount) {
+      return u;
+    }
+  }
+  return null;
+}
+
+function resolveAmountPaisa(payload: Record<string, any>, paisaKeys: string[], majorKeys: string[]): number {
+  for (const k of paisaKeys) {
+    if (payload[k] !== undefined && payload[k] !== null && payload[k] !== '') {
+      const n = Number(payload[k]);
+      if (!isNaN(n) && n >= 0) return Math.round(n);
+    }
+  }
+  for (const k of majorKeys) {
+    if (payload[k] !== undefined && payload[k] !== null && payload[k] !== '') {
+      const n = Number(payload[k]);
+      if (!isNaN(n) && n >= 0) return Math.round(n * 100);
+    }
+  }
+  return 0;
+}
+
+async function handleUnifiedSeamlessCallback(req: Request, res: Response) {
+  const payload = { ...(req.query || {}), ...(req.body || {}) };
+  if (!verifyWebhookSignatureIfConfigured(req, getConfiguredWebhookSecrets())) {
+    return res.status(401).json({ code: 401, status: 'INVALID_SIGNATURE', balance: 0 });
+  }
+
+  const targetUser = resolveSeamlessPlayer(payload);
+  if (!targetUser) return res.status(404).json({ code: 1, status: 'USER_NOT_FOUND', balance: 0, balancePaisa: 0 });
+
+  const action = String(payload.action || payload.method || payload.type || 'balance').toLowerCase();
   const wallet = db.wallets.get(targetUser.id);
-  const currentBalTk = wallet ? wallet.availablePaisa / 100 : 0;
-  const txnId = String(payload.serial_number || payload.txnId || payload.betId || `cb_${Date.now()}`);
+  const currentBalPaisa = wallet ? wallet.availablePaisa : 0;
+  const currentBalTk = Number((currentBalPaisa / 100).toFixed(2));
+  const txnId = String(
+    payload.serial_number || payload.txnId || payload.tx_id || payload.transaction_id || payload.betId || payload.round_id || `cb_${Date.now()}`
+  ).trim();
+  const gameRef = String(payload.game_uid || payload.gameCode || payload.gameId || payload.game_id || 'external_game');
 
-  if (action !== 'balance' && db.processedWebhooks.has(txnId)) {
-    return res.json({ code: 0, status: 'OK', msg: 'Already Processed', balance: currentBalTk });
+  if (
+    action !== 'balance' &&
+    action !== 'get_balance' &&
+    action !== 'getbalance' &&
+    action !== 'authenticate' &&
+    action !== 'auth' &&
+    action !== 'verify' &&
+    db.processedWebhooks.has(`${action}:${txnId}`)
+  ) {
+    return res.json({ code: 0, status: 'OK', msg: 'Already Processed', balance: currentBalTk, balancePaisa: currentBalPaisa, currency: 'BDT' });
   }
 
-  const numBet = Number(payload.bet_amount ?? payload.amount ?? 0);
-  const numWin = Number(payload.win_amount ?? payload.amount ?? 0);
+  const betPaisa = resolveAmountPaisa(payload, ['betAmountPaisa', 'debitPaisa', 'amountPaisa'], ['bet_amount', 'betAmount', 'debit_amount', 'debit', 'amount']);
+  const winPaisa = resolveAmountPaisa(payload, ['winAmountPaisa', 'creditPaisa', 'amountPaisa'], ['win_amount', 'winAmount', 'credit_amount', 'credit', 'payout', 'amount']);
 
-  if (action === 'bet' && numBet > 0) {
-    if (numBet > currentBalTk) return res.status(400).json({ code: 1, status: 'INSUFFICIENT_FUNDS', balance: currentBalTk });
-    await ledger.stakeBet(targetUser.id, txnId, Math.round(numBet * 100), `Seamless API Bet: ${payload.game_uid || 'game'}`);
-    db.processedWebhooks.set(txnId, {
-      idempotencyKey: txnId,
+  if ((action === 'bet' || action === 'debit' || action === 'place_bet' || action === 'wager' || action === 'withdraw') && betPaisa > 0) {
+    if (betPaisa > currentBalPaisa) {
+      return res.status(400).json({ code: 1, status: 'INSUFFICIENT_FUNDS', balance: currentBalTk, balancePaisa: currentBalPaisa });
+    }
+    await ledger.stakeBet(targetUser.id, txnId, betPaisa, `Seamless API Bet: ${gameRef}`);
+    if (wallet) wallet.wageringProgressPaisa = (wallet.wageringProgressPaisa || 0) + betPaisa;
+    targetUser.turnoverPaisa = (targetUser.turnoverPaisa || 0) + betPaisa;
+    db.bets.set(`bet_api_${txnId}`, {
+      id: `bet_api_${txnId}`,
+      userId: targetUser.id,
+      eventId: gameRef,
+      marketId: 'external_api',
+      selectionId: 'seamless_bet',
+      eventName: `Casino API (${gameRef})`,
+      marketName: 'External Provider Bet',
+      selectionName: `Txn ${txnId}`,
+      stakePaisa: betPaisa,
+      acceptedOdds: 1,
+      potentialReturnPaisa: betPaisa,
+      oddsChangedConsent: true,
+      status: 'PENDING',
+      placedAt: new Date().toISOString(),
+    });
+    db.processedWebhooks.set(`${action}:${txnId}`, {
+      idempotencyKey: `${action}:${txnId}`,
       provider: 'casino_api',
       receivedAt: new Date().toISOString(),
       payload,
@@ -3932,13 +4977,23 @@ app.post('/api/v1/casino/seamless/callback', async (req: Request, res: Response)
       isDuplicate: false,
       status: 'PROCESSED',
     });
-    return res.json({ code: 0, status: 'OK', balance: (db.wallets.get(targetUser.id)?.availablePaisa || 0) / 100 });
+    db.saveToDisk();
+    const newPaisa = db.wallets.get(targetUser.id)?.availablePaisa || 0;
+    return res.json({ code: 0, status: 'OK', balance: Number((newPaisa / 100).toFixed(2)), balancePaisa: newPaisa, currency: 'BDT' });
   }
 
-  if ((action === 'settle' || action === 'win') && numWin > 0) {
-    await ledger.winBet(targetUser.id, txnId, Math.round(numWin * 100), `Seamless API Win: ${payload.game_uid || 'game'}`);
-    db.processedWebhooks.set(txnId, {
-      idempotencyKey: txnId,
+  if ((action === 'settle' || action === 'win' || action === 'credit' || action === 'payout' || action === 'result' || action === 'deposit') && winPaisa >= 0) {
+    if (winPaisa > 0) {
+      await ledger.winBet(targetUser.id, txnId, winPaisa, `Seamless API Win: ${gameRef}`);
+    }
+    const relatedBet = db.bets.get(`bet_api_${txnId}`) || db.bets.get(String(payload.betId || ''));
+    if (relatedBet) {
+      relatedBet.status = winPaisa > 0 ? 'WON' : 'LOST';
+      relatedBet.payoutPaisa = winPaisa;
+      relatedBet.settledAt = new Date().toISOString();
+    }
+    db.processedWebhooks.set(`${action}:${txnId}`, {
+      idempotencyKey: `${action}:${txnId}`,
       provider: 'casino_api',
       receivedAt: new Date().toISOString(),
       payload,
@@ -3946,99 +5001,267 @@ app.post('/api/v1/casino/seamless/callback', async (req: Request, res: Response)
       isDuplicate: false,
       status: 'PROCESSED',
     });
-    return res.json({ code: 0, status: 'OK', balance: (db.wallets.get(targetUser.id)?.availablePaisa || 0) / 100 });
+    db.saveToDisk();
+    const newPaisa = db.wallets.get(targetUser.id)?.availablePaisa || 0;
+    return res.json({ code: 0, status: 'OK', balance: Number((newPaisa / 100).toFixed(2)), balancePaisa: newPaisa, currency: 'BDT' });
   }
 
-  if (action === 'rollback' && numBet > 0) {
-    await ledger.refundBet(targetUser.id, `rb_${txnId}`, Math.round(numBet * 100), `Seamless API Rollback: ${txnId}`);
-    return res.json({ code: 0, status: 'OK', balance: (db.wallets.get(targetUser.id)?.availablePaisa || 0) / 100 });
+  if (action === 'bet_and_settle' || action === 'bet_win' || action === 'spin') {
+    if (betPaisa > currentBalPaisa) {
+      return res.status(400).json({ code: 1, status: 'INSUFFICIENT_FUNDS', balance: currentBalTk, balancePaisa: currentBalPaisa });
+    }
+    if (betPaisa > 0) {
+      await ledger.stakeBet(targetUser.id, `${txnId}_bet`, betPaisa, `Seamless API Spin Bet: ${gameRef}`);
+      if (wallet) wallet.wageringProgressPaisa = (wallet.wageringProgressPaisa || 0) + betPaisa;
+      targetUser.turnoverPaisa = (targetUser.turnoverPaisa || 0) + betPaisa;
+    }
+    if (winPaisa > 0) {
+      await ledger.winBet(targetUser.id, `${txnId}_win`, winPaisa, `Seamless API Spin Win: ${gameRef}`);
+    }
+    db.bets.set(`bet_api_${txnId}`, {
+      id: `bet_api_${txnId}`,
+      userId: targetUser.id,
+      eventId: gameRef,
+      marketId: 'external_api',
+      selectionId: 'bet_and_settle',
+      eventName: `Casino API (${gameRef})`,
+      marketName: 'External Round',
+      selectionName: `Txn ${txnId}`,
+      stakePaisa: betPaisa,
+      acceptedOdds: betPaisa > 0 ? Number((winPaisa / betPaisa).toFixed(2)) : 1,
+      potentialReturnPaisa: winPaisa,
+      payoutPaisa: winPaisa,
+      oddsChangedConsent: true,
+      status: winPaisa > 0 ? 'WON' : 'LOST',
+      placedAt: new Date().toISOString(),
+      settledAt: new Date().toISOString(),
+    });
+    db.processedWebhooks.set(`${action}:${txnId}`, {
+      idempotencyKey: `${action}:${txnId}`,
+      provider: 'casino_api',
+      receivedAt: new Date().toISOString(),
+      payload,
+      processedAt: new Date().toISOString(),
+      isDuplicate: false,
+      status: 'PROCESSED',
+    });
+    db.saveToDisk();
+    const newPaisa = db.wallets.get(targetUser.id)?.availablePaisa || 0;
+    return res.json({ code: 0, status: 'OK', balance: Number((newPaisa / 100).toFixed(2)), balancePaisa: newPaisa, currency: 'BDT' });
   }
 
-  return res.json({ code: 0, status: 'OK', balance: currentBalTk, currency: 'BDT' });
-});
+  if ((action === 'rollback' || action === 'refund' || action === 'cancel' || action === 'void') && betPaisa > 0) {
+    await ledger.refundBet(targetUser.id, `rb_${txnId}`, betPaisa, `Seamless API Rollback: ${txnId}`);
+    db.processedWebhooks.set(`${action}:${txnId}`, {
+      idempotencyKey: `${action}:${txnId}`,
+      provider: 'casino_api',
+      receivedAt: new Date().toISOString(),
+      payload,
+      processedAt: new Date().toISOString(),
+      isDuplicate: false,
+      status: 'PROCESSED',
+    });
+    db.saveToDisk();
+    const newPaisa = db.wallets.get(targetUser.id)?.availablePaisa || 0;
+    return res.json({ code: 0, status: 'OK', balance: Number((newPaisa / 100).toFixed(2)), balancePaisa: newPaisa, currency: 'BDT' });
+  }
 
-// Player Balance Check
-app.post('/api/v1/casino/seamless/balance', (req: Request, res: Response) => {
-  const { userId } = req.body;
-  const user = db.users.get(userId);
-  if (!user) return res.status(404).json({ status: 'USER_NOT_FOUND', balancePaisa: 0 });
+  return res.json({
+    code: 0,
+    status: 'OK',
+    userId: targetUser.id,
+    username: targetUser.username,
+    balance: currentBalTk,
+    balancePaisa: currentBalPaisa,
+    currency: 'BDT',
+    timestamp: new Date().toISOString(),
+  });
+}
 
-  const wallet = db.wallets.get(userId);
+// Unified Seamless Wallet Webhook Callback (supports GET & POST; balance | bet | settle | win | bet_and_settle | rollback)
+app.post('/api/v1/casino/seamless/callback', handleUnifiedSeamlessCallback);
+app.get('/api/v1/casino/seamless/callback', handleUnifiedSeamlessCallback);
+
+// Player Balance Check (GET & POST)
+const handleSeamlessBalance = (req: Request, res: Response) => {
+  const payload = { ...(req.query || {}), ...(req.body || {}) };
+  if (!verifyWebhookSignatureIfConfigured(req, getConfiguredWebhookSecrets())) {
+    return res.status(401).json({ status: 'INVALID_SIGNATURE', balance: 0, balancePaisa: 0 });
+  }
+  const user = resolveSeamlessPlayer(payload);
+  if (!user) return res.status(404).json({ status: 'USER_NOT_FOUND', balance: 0, balancePaisa: 0 });
+
+  const wallet = db.wallets.get(user.id);
   const balancePaisa = wallet?.availablePaisa || 0;
 
   res.json({
+    code: 0,
     status: 'OK',
-    userId,
+    userId: user.id,
+    username: user.username,
     currency: 'BDT',
     balancePaisa,
     balanceTk: balancePaisa / 100,
+    balance: Number((balancePaisa / 100).toFixed(2)),
     timestamp: new Date().toISOString(),
   });
-});
+};
+app.post('/api/v1/casino/seamless/balance', handleSeamlessBalance);
+app.get('/api/v1/casino/seamless/balance', handleSeamlessBalance);
 
 // Player Bet Debit (Seamless Debit)
 app.post('/api/v1/casino/seamless/bet', async (req: Request, res: Response) => {
-  const { userId, betId, amountPaisa, gameId, roundId } = req.body;
-  const user = db.users.get(userId);
+  const payload = req.body || {};
+  if (!verifyWebhookSignatureIfConfigured(req, getConfiguredWebhookSecrets())) {
+    return res.status(401).json({ status: 'INVALID_SIGNATURE' });
+  }
+  const user = resolveSeamlessPlayer(payload);
   if (!user) return res.status(404).json({ status: 'USER_NOT_FOUND' });
 
-  const wallet = db.wallets.get(userId);
-  if (!wallet || wallet.availablePaisa < Number(amountPaisa)) {
-    return res.status(400).json({ status: 'INSUFFICIENT_FUNDS', balancePaisa: wallet?.availablePaisa || 0 });
+  const debitPaisa = resolveAmountPaisa(payload, ['amountPaisa', 'betAmountPaisa'], ['bet_amount', 'betAmount', 'amountTk', 'amount']);
+  const wallet = db.wallets.get(user.id);
+  if (!wallet || debitPaisa <= 0 || wallet.availablePaisa < debitPaisa) {
+    return res.status(400).json({ status: 'INSUFFICIENT_FUNDS', balancePaisa: wallet?.availablePaisa || 0, balance: (wallet?.availablePaisa || 0) / 100 });
   }
 
-  const txn = await ledger.stakeBet(
-    userId,
-    betId || `bet_${Date.now()}`,
-    Number(amountPaisa),
-    `Seamless Casino Bet: ${gameId || 'game'} Round ${roundId || ''}`
-  );
+  const betId = String(payload.betId || payload.txnId || payload.serial_number || `bet_${Date.now()}`);
+  const gameId = String(payload.gameId || payload.gameCode || payload.game_uid || 'game');
+  const roundId = String(payload.roundId || payload.round_id || '');
+  const idempKey = `bet:${betId}`;
+  if (db.processedWebhooks.has(idempKey)) {
+    return res.json({ status: 'OK', msg: 'Already Processed', balancePaisa: wallet.availablePaisa, balance: wallet.availablePaisa / 100 });
+  }
 
+  const txn = await ledger.stakeBet(user.id, betId, debitPaisa, `Seamless Casino Bet: ${gameId} Round ${roundId}`);
+  wallet.wageringProgressPaisa = (wallet.wageringProgressPaisa || 0) + debitPaisa;
+  user.turnoverPaisa = (user.turnoverPaisa || 0) + debitPaisa;
+  db.bets.set(`bet_api_${betId}`, {
+    id: `bet_api_${betId}`,
+    userId: user.id,
+    eventId: gameId,
+    marketId: 'external_api',
+    selectionId: 'seamless_bet',
+    eventName: `Casino API (${gameId})`,
+    marketName: 'External Provider Bet',
+    selectionName: `Round ${roundId || betId}`,
+    stakePaisa: debitPaisa,
+    acceptedOdds: 1,
+    potentialReturnPaisa: debitPaisa,
+    oddsChangedConsent: true,
+    status: 'PENDING',
+    placedAt: new Date().toISOString(),
+  });
+  db.processedWebhooks.set(idempKey, {
+    idempotencyKey: idempKey,
+    provider: 'casino_api',
+    receivedAt: new Date().toISOString(),
+    payload,
+    processedAt: new Date().toISOString(),
+    isDuplicate: false,
+    status: 'PROCESSED',
+  });
+  db.saveToDisk();
+
+  const updatedPaisa = db.wallets.get(user.id)?.availablePaisa || 0;
   res.json({
+    code: 0,
     status: 'OK',
     txnId: txn?.id || `txn_${Date.now()}`,
-    balancePaisa: db.wallets.get(userId)?.availablePaisa || 0,
+    balancePaisa: updatedPaisa,
+    balance: Number((updatedPaisa / 100).toFixed(2)),
     timestamp: new Date().toISOString(),
   });
 });
 
 // Player Win Credit (Seamless Credit)
 app.post('/api/v1/casino/seamless/win', async (req: Request, res: Response) => {
-  const { userId, winId, amountPaisa, gameId, roundId } = req.body;
-  const user = db.users.get(userId);
+  const payload = req.body || {};
+  if (!verifyWebhookSignatureIfConfigured(req, getConfiguredWebhookSecrets())) {
+    return res.status(401).json({ status: 'INVALID_SIGNATURE' });
+  }
+  const user = resolveSeamlessPlayer(payload);
   if (!user) return res.status(404).json({ status: 'USER_NOT_FOUND' });
 
-  const txn = await ledger.winBet(
-    userId,
-    winId || `win_${Date.now()}`,
-    Number(amountPaisa),
-    `Seamless Casino Payout: ${gameId || 'game'} Round ${roundId || ''}`
-  );
+  const creditPaisa = resolveAmountPaisa(payload, ['amountPaisa', 'winAmountPaisa'], ['win_amount', 'winAmount', 'amountTk', 'amount']);
+  const winId = String(payload.winId || payload.txnId || payload.serial_number || `win_${Date.now()}`);
+  const gameId = String(payload.gameId || payload.gameCode || payload.game_uid || 'game');
+  const roundId = String(payload.roundId || payload.round_id || '');
+  const idempKey = `win:${winId}`;
 
+  if (db.processedWebhooks.has(idempKey)) {
+    const cur = db.wallets.get(user.id)?.availablePaisa || 0;
+    return res.json({ status: 'OK', msg: 'Already Processed', balancePaisa: cur, balance: cur / 100 });
+  }
+
+  let txn = null;
+  if (creditPaisa > 0) {
+    txn = await ledger.winBet(user.id, winId, creditPaisa, `Seamless Casino Payout: ${gameId} Round ${roundId}`);
+  }
+  const relatedBet = db.bets.get(`bet_api_${String(payload.betId || winId)}`);
+  if (relatedBet) {
+    relatedBet.status = creditPaisa > 0 ? 'WON' : 'LOST';
+    relatedBet.payoutPaisa = creditPaisa;
+    relatedBet.settledAt = new Date().toISOString();
+  }
+  db.processedWebhooks.set(idempKey, {
+    idempotencyKey: idempKey,
+    provider: 'casino_api',
+    receivedAt: new Date().toISOString(),
+    payload,
+    processedAt: new Date().toISOString(),
+    isDuplicate: false,
+    status: 'PROCESSED',
+  });
+  db.saveToDisk();
+
+  const updatedPaisa = db.wallets.get(user.id)?.availablePaisa || 0;
   res.json({
+    code: 0,
     status: 'OK',
     txnId: txn?.id || `txn_${Date.now()}`,
-    balancePaisa: db.wallets.get(userId)?.availablePaisa || 0,
+    balancePaisa: updatedPaisa,
+    balance: Number((updatedPaisa / 100).toFixed(2)),
     timestamp: new Date().toISOString(),
   });
 });
 
 // Bet Rollback / Refund
 app.post('/api/v1/casino/seamless/rollback', async (req: Request, res: Response) => {
-  const { userId, betId, rollbackAmountPaisa } = req.body;
-  const user = db.users.get(userId);
+  const payload = req.body || {};
+  if (!verifyWebhookSignatureIfConfigured(req, getConfiguredWebhookSecrets())) {
+    return res.status(401).json({ status: 'INVALID_SIGNATURE' });
+  }
+  const user = resolveSeamlessPlayer(payload);
   if (!user) return res.status(404).json({ status: 'USER_NOT_FOUND' });
 
-  await ledger.refundBet(
-    userId,
-    `rollback_${betId}_${Date.now()}`,
-    Number(rollbackAmountPaisa),
-    `Casino Round Cancelled / Refund Rollback`
-  );
+  const betId = String(payload.betId || payload.txnId || payload.serial_number || `rb_${Date.now()}`);
+  const refundPaisa = resolveAmountPaisa(payload, ['rollbackAmountPaisa', 'amountPaisa'], ['amountTk', 'amount', 'bet_amount']);
+  const idempKey = `rollback:${betId}`;
+  if (db.processedWebhooks.has(idempKey)) {
+    const cur = db.wallets.get(user.id)?.availablePaisa || 0;
+    return res.json({ status: 'OK', msg: 'Already Processed', balancePaisa: cur, balance: cur / 100 });
+  }
 
+  if (refundPaisa > 0) {
+    await ledger.refundBet(user.id, `rollback_${betId}_${Date.now()}`, refundPaisa, `Casino Round Cancelled / Refund Rollback`);
+  }
+  db.processedWebhooks.set(idempKey, {
+    idempotencyKey: idempKey,
+    provider: 'casino_api',
+    receivedAt: new Date().toISOString(),
+    payload,
+    processedAt: new Date().toISOString(),
+    isDuplicate: false,
+    status: 'PROCESSED',
+  });
+  db.saveToDisk();
+
+  const updatedPaisa = db.wallets.get(user.id)?.availablePaisa || 0;
   res.json({
+    code: 0,
     status: 'OK',
-    balancePaisa: db.wallets.get(userId)?.availablePaisa || 0,
+    balancePaisa: updatedPaisa,
+    balance: Number((updatedPaisa / 100).toFixed(2)),
     timestamp: new Date().toISOString(),
   });
 });
@@ -4211,51 +5434,34 @@ app.post('/api/v1/admin/live-gateway/test', async (req: Request, res: Response) 
 
   const targetApi = req.body.apiBaseUrl || db.liveGatewayConfig.apiBaseUrl;
   const targetCode = req.body.operatorCode || db.liveGatewayConfig.operatorCode;
-  const targetKey = req.body.apiKey || db.liveGatewayConfig.apiKey;
-  const startTime = Date.now();
-  let liveVerified = false;
-  let httpStatus = 0;
+  const targetKey = req.body.apiKey || db.liveGatewayConfig.apiKey || db.liveGatewayConfig.apiSecret;
 
-  if (isSafeExternalUrl(targetApi) && !targetApi.includes('example.com')) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
-      const resp = await fetch(targetApi, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Fb88baji-Live-Gateway/2.0',
-          'X-Operator-Code': targetCode || '',
-          'X-Api-Key': targetKey || '',
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
-      httpStatus = resp.status;
-      liveVerified = resp.status < 500;
-    } catch {
-      liveVerified = false;
-    }
-  }
+  const result = await pingExternalCasinoConnector({
+    apiEndpoint: targetApi,
+    operatorCode: targetCode,
+    secretKey: targetKey,
+    authType: 'bearer',
+  });
 
-  const latencyMs = Math.max(1, Date.now() - startTime);
-  db.liveGatewayConfig.latencyMs = latencyMs;
+  db.liveGatewayConfig.latencyMs = result.latencyMs;
   db.liveGatewayConfig.lastPingAt = new Date().toISOString();
-  db.liveGatewayConfig.status = liveVerified ? 'CONNECTED' : 'DISCONNECTED';
+  db.liveGatewayConfig.status = result.liveVerified ? 'CONNECTED' : 'DISCONNECTED';
   db.saveToDisk();
 
   res.json({
-    success: liveVerified,
+    success: result.liveVerified,
     status: db.liveGatewayConfig.status,
-    latencyMs,
-    httpStatus,
+    latencyMs: result.latencyMs,
+    httpStatus: result.httpStatus,
+    detectedGamesCount: result.detectedGamesCount,
     gatewayName: db.liveGatewayConfig.gatewayName,
     environment: db.liveGatewayConfig.environment,
     apiBaseUrl: targetApi,
     operatorCode: targetCode,
-    liveVerified,
-    message: liveVerified
-      ? `রিয়েল ক্যাসিনো API হ্যান্ডশেক সফল! রেসপন্স টাইম: ${latencyMs}ms.`
-      : 'ক্যাসিনো API এন্ডপয়েন্ট যাচাই ব্যর্থ হয়েছে — অনুগ্রহ করে সঠিক পাবলিক API URL পরীক্ষা করুন।',
+    liveVerified: result.liveVerified,
+    message: result.liveVerified
+      ? `রিয়েল ক্যাসিনো API HTTP ${result.httpStatus} হ্যান্ডশেক সফল! (${result.latencyMs}ms${result.detectedGamesCount > 0 ? ` • ${result.detectedGamesCount}টি গেম পাওয়া গেছে` : ''})`
+      : `ক্যাসিনো API এন্ডপয়েন্ট যাচাই ব্যর্থ${result.errorDetail ? `: ${result.errorDetail}` : ' — অনুগ্রহ করে সঠিক পাবলিক API URL পরীক্ষা করুন।'}`,
     timestamp: db.liveGatewayConfig.lastPingAt,
   });
 });
@@ -4267,7 +5473,7 @@ app.post('/api/v1/admin/live-gateway/sync', async (req: Request, res: Response) 
 
   const { games: providedGames } = req.body || {};
   if (Array.isArray(providedGames) && providedGames.length > 0) {
-    const result = importExternalGamesFromArray(providedGames, 'gw', 'gateway_live_universal');
+    const result = importExternalGamesFromArray(providedGames, 'gw', 'gateway_live_universal', db.liveGatewayConfig.gatewayName);
     db.liveGatewayConfig.lastSyncedAt = new Date().toISOString();
     db.saveToDisk();
     return res.json({
@@ -4284,34 +5490,40 @@ app.post('/api/v1/admin/live-gateway/sync', async (req: Request, res: Response) 
   let updatedFromRemote = 0;
   const baseUrl = (db.liveGatewayConfig.apiBaseUrl || '').replace(/\/+$/, '');
   if (isSafeExternalUrl(baseUrl) && !baseUrl.includes('example.com')) {
-    const paths = [`${baseUrl}/api/v1/games`, `${baseUrl}/game/list`, `${baseUrl}/games`];
+    const { headers, signedBody } = buildExternalApiRequest({
+      operatorCode: db.liveGatewayConfig.operatorCode,
+      secretKey: db.liveGatewayConfig.apiKey || db.liveGatewayConfig.apiSecret,
+      authType: 'bearer',
+      payload: { currency: 'BDT' },
+    });
+    const paths = [baseUrl, `${baseUrl}/api/v1/games`, `${baseUrl}/game/list`, `${baseUrl}/games`, `${baseUrl}/v1/games`];
     for (const url of paths) {
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 5000);
-        const resp = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'User-Agent': 'Fb88baji-Live-Gateway/2.0',
-            'X-Operator-Code': db.liveGatewayConfig.operatorCode || '',
-            'X-Api-Key': db.liveGatewayConfig.apiKey || '',
-          },
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (resp.ok) {
-          const data = (await resp.json().catch(() => null)) as any;
-          const rawList = Array.isArray(data?.data) ? data.data : Array.isArray(data?.games) ? data.games : Array.isArray(data) ? data : [];
-          if (rawList.length > 0) {
-            const imported = importExternalGamesFromArray(rawList, 'gw', 'gateway_live_universal');
-            addedFromRemote = imported.addedCount;
-            updatedFromRemote = imported.updatedCount;
-            break;
+      for (const method of ['GET', 'POST'] as const) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 5000);
+          const resp = await fetch(url, {
+            method,
+            headers,
+            ...(method === 'POST' ? { body: JSON.stringify(signedBody) } : {}),
+            signal: controller.signal,
+          });
+          clearTimeout(timeout);
+          if (resp.ok) {
+            const data = (await resp.json().catch(() => null)) as any;
+            const rawList = extractGamesArray(data);
+            if (rawList.length > 0) {
+              const imported = importExternalGamesFromArray(rawList, 'gw', 'gateway_live_universal', db.liveGatewayConfig.gatewayName);
+              addedFromRemote = imported.addedCount;
+              updatedFromRemote = imported.updatedCount;
+              break;
+            }
           }
+        } catch {
+          // continue
         }
-      } catch {
-        // continue
       }
+      if (addedFromRemote > 0 || updatedFromRemote > 0) break;
     }
   }
 

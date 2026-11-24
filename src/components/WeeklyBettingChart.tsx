@@ -280,7 +280,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
       .attr('x2', innerWidth)
       .attr('y1', (d) => yScale(d))
       .attr('y2', (d) => yScale(d))
-      .attr('stroke', 'rgba(255, 255, 255, 0.08)')
+      .attr('stroke', '#e2efe7')
       .attr('stroke-dasharray', '3,3');
 
     // 4. Zero Baseline (Break-even line) for P/L metrics
@@ -294,7 +294,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         .attr('x2', innerWidth)
         .attr('y1', zeroY)
         .attr('y2', zeroY)
-        .attr('stroke', '#fbbf24')
+        .attr('stroke', '#f59e0b')
         .attr('stroke-width', 1.25)
         .attr('stroke-dasharray', '5,4')
         .attr('opacity', 0.85);
@@ -304,7 +304,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         .attr('x', innerWidth)
         .attr('y', zeroY - 4)
         .attr('text-anchor', 'end')
-        .attr('fill', '#fbbf24')
+        .attr('fill', '#d97706')
         .attr('font-size', '9px')
         .attr('font-weight', '700')
         .text(lang === 'bn' ? '৳০.০০ (ব্রেক-ইভেন)' : '৳0.00 (Break-Even)');
@@ -408,8 +408,8 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
           .attr('cx', cx)
           .attr('cy', yScale(d.totalStakeTk))
           .attr('r', 4)
-          .attr('fill', '#fbbf24')
-          .attr('stroke', '#1e0510')
+          .attr('fill', '#f59e0b')
+          .attr('stroke', '#ffffff')
           .attr('stroke-width', 2);
 
         dotsGroup
@@ -418,7 +418,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
           .attr('cy', yScale(d.totalPayoutTk))
           .attr('r', 4)
           .attr('fill', '#06b6d4')
-          .attr('stroke', '#1e0510')
+          .attr('stroke', '#ffffff')
           .attr('stroke-width', 2);
         return;
       } else if (metric === 'netPnl') {
@@ -465,10 +465,10 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
           .tickPadding(10)
       );
 
-    xAxis.select('.domain').attr('stroke', 'rgba(255, 255, 255, 0.15)');
+    xAxis.select('.domain').attr('stroke', '#cde8d8');
     xAxis
       .selectAll('text')
-      .attr('fill', '#cbd5e1')
+      .attr('fill', '#334155')
       .attr('font-size', '10px')
       .attr('font-weight', '600')
       .text((d: any) => {
@@ -500,7 +500,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
     yAxis.select('.domain').remove();
     yAxis
       .selectAll('text')
-      .attr('fill', '#94a3b8')
+      .attr('fill', '#475569')
       .attr('font-size', '10px')
       .attr('font-family', 'monospace')
       .attr('font-weight', 'bold');
@@ -510,7 +510,7 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
       .append('line')
       .attr('y1', 0)
       .attr('y2', innerHeight)
-      .attr('stroke', 'rgba(255, 255, 255, 0.35)')
+      .attr('stroke', 'rgba(0, 168, 89, 0.45)')
       .attr('stroke-width', 1.2)
       .attr('stroke-dasharray', '3,3')
       .style('opacity', 0);
@@ -562,17 +562,17 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
   return (
     <div className="space-y-4">
       {/* 1. Header & Controls Cluster */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#940042]/70">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[#dceee3]">
         <div>
           <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-amber-400/20 text-amber-400 border border-amber-400/30">
+            <span className="p-1.5 rounded-lg bg-[#e6f7ee] text-[#00a859] border border-[#bde6cf]">
               <Activity className="w-4 h-4" />
             </span>
-            <h3 className="text-base font-extrabold text-white tracking-wide">
+            <h3 className="text-base font-extrabold text-[#182620] tracking-wide">
               {lang === 'bn' ? 'সাপ্তাহিক বেটিং পারফরম্যান্স ও P/L হিস্ট্রি' : 'Weekly Betting Performance & P/L Chart'}
             </h3>
           </div>
-          <p className="text-xs text-rose-200/70 mt-0.5">
+          <p className="text-xs text-[#557063] mt-0.5">
             {lang === 'bn'
               ? 'D3.js চালিত ইন্টারেক্টিভ চার্টে আপনার লাভ, ক্ষতি ও টার্নওভার বিশ্লেষণ করুন'
               : 'Interactive D3.js chart tracking daily returns, turnover, and net yield'}
@@ -580,40 +580,40 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         </div>
 
         {/* Metric Switcher Tabs */}
-        <div className="flex items-center gap-1 bg-[#47001f] p-1 rounded-xl border border-[#940042] self-start sm:self-auto">
+        <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-[#dceee3] shadow-xs self-start sm:self-auto">
           <button
             onClick={() => setMetric('netPnl')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
               metric === 'netPnl'
-                ? 'bg-[#940042] text-white shadow font-black'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#00a859] text-white shadow font-black'
+                : 'text-[#557063] hover:text-[#182620] hover:bg-[#f2f9f5]'
             }`}
           >
-            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            <TrendingUp className={`w-3.5 h-3.5 ${metric === 'netPnl' ? 'text-white' : 'text-[#00a859]'}`} />
             <span>{lang === 'bn' ? 'দৈনিক লাভ/ক্ষতি' : 'Daily P/L'}</span>
           </button>
 
           <button
             onClick={() => setMetric('cumulative')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
               metric === 'cumulative'
-                ? 'bg-[#940042] text-white shadow font-black'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#00a859] text-white shadow font-black'
+                : 'text-[#557063] hover:text-[#182620] hover:bg-[#f2f9f5]'
             }`}
           >
-            <Layers className="w-3.5 h-3.5 text-amber-400" />
+            <Layers className={`w-3.5 h-3.5 ${metric === 'cumulative' ? 'text-white' : 'text-amber-500'}`} />
             <span>{lang === 'bn' ? 'সঞ্চিত P/L' : 'Cumulative'}</span>
           </button>
 
           <button
             onClick={() => setMetric('turnoverVsPayout')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
               metric === 'turnoverVsPayout'
-                ? 'bg-[#940042] text-white shadow font-black'
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
+                ? 'bg-[#00a859] text-white shadow font-black'
+                : 'text-[#557063] hover:text-[#182620] hover:bg-[#f2f9f5]'
             }`}
           >
-            <BarChart2 className="w-3.5 h-3.5 text-cyan-400" />
+            <BarChart2 className={`w-3.5 h-3.5 ${metric === 'turnoverVsPayout' ? 'text-white' : 'text-cyan-600'}`} />
             <span>{lang === 'bn' ? 'টার্নওভার বনাম পেআউট' : 'Turnover / Payout'}</span>
           </button>
         </div>
@@ -622,23 +622,23 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
       {/* 2. KPI Summary Stat Badges */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
         {/* KPI 1: Net P/L */}
-        <div className="p-3 rounded-2xl bg-[#47001f] border border-[#940042] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[11px] text-slate-300">
+        <div className="p-3 rounded-2xl bg-white border border-[#dceee3] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[11px] text-[#557063] font-semibold">
             <span>{lang === 'bn' ? '৭ দিনের নীট লাভ/ক্ষতি' : '7-Day Net P/L'}</span>
             {summary.totalPnl >= 0 ? (
-              <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+              <TrendingUp className="w-3.5 h-3.5 text-[#00a859]" />
             ) : (
-              <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
+              <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
             )}
           </div>
           <div
             className={`text-lg font-mono font-black mt-1 ${
-              summary.totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              summary.totalPnl >= 0 ? 'text-[#00a859]' : 'text-rose-600'
             }`}
           >
             {summary.totalPnl >= 0 ? '+' : ''}৳{summary.totalPnl.toFixed(2)}
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-[#557063]">
             {summary.totalPnl >= 0
               ? lang === 'bn'
                 ? '🟢 প্রফিটেবল রান'
@@ -650,31 +650,31 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         </div>
 
         {/* KPI 2: Total Turnover */}
-        <div className="p-3 rounded-2xl bg-[#47001f] border border-[#940042] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[11px] text-slate-300">
+        <div className="p-3 rounded-2xl bg-white border border-[#dceee3] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[11px] text-[#557063] font-semibold">
             <span>{lang === 'bn' ? 'মোট স্টেক / টার্নওভার' : 'Weekly Turnover'}</span>
-            <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+            <DollarSign className="w-3.5 h-3.5 text-amber-500" />
           </div>
-          <div className="text-lg font-mono font-black text-amber-300 mt-1">
+          <div className="text-lg font-mono font-black text-amber-600 mt-1">
             ৳{summary.totalStake.toFixed(2)}
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-[#557063]">
             {summary.totalBets} {lang === 'bn' ? 'টি রাউন্ড খেলা হয়েছে' : 'bets settled'}
           </span>
         </div>
 
         {/* KPI 3: Best Day */}
-        <div className="p-3 rounded-2xl bg-[#47001f] border border-[#940042] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[11px] text-slate-300">
+        <div className="p-3 rounded-2xl bg-white border border-[#dceee3] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[11px] text-[#557063] font-semibold">
             <span>{lang === 'bn' ? 'সর্বোচ্চ জয়ের দিন' : 'Best Return Day'}</span>
-            <Award className="w-3.5 h-3.5 text-amber-400" />
+            <Award className="w-3.5 h-3.5 text-[#00a859]" />
           </div>
-          <div className="text-lg font-mono font-black text-white mt-1">
+          <div className="text-lg font-mono font-black text-[#182620] mt-1">
             {summary.bestDay && summary.totalBets > 0
               ? `${summary.bestDay.netPnlTk >= 0 ? '+' : ''}৳${summary.bestDay.netPnlTk.toFixed(2)}`
               : '৳0.00'}
           </div>
-          <span className="text-[10px] text-amber-400 font-bold">
+          <span className="text-[10px] text-[#00a859] font-bold">
             {summary.bestDay && summary.totalBets > 0
               ? `${lang === 'bn' ? summary.bestDay.dayLabelBn : summary.bestDay.dayLabel} (${summary.bestDay.date.substring(5)})`
               : (lang === 'bn' ? 'কোনো বাজি নেই' : 'No bets yet')}
@@ -682,37 +682,37 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         </div>
 
         {/* KPI 4: Win Rate */}
-        <div className="p-3 rounded-2xl bg-[#47001f] border border-[#940042] shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between text-[11px] text-slate-300">
+        <div className="p-3 rounded-2xl bg-white border border-[#dceee3] shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-[11px] text-[#557063] font-semibold">
             <span>{lang === 'bn' ? 'সাপ্তাহিক উইন রেট' : 'Weekly Win Rate'}</span>
-            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <Sparkles className="w-3.5 h-3.5 text-cyan-600" />
           </div>
-          <div className="text-lg font-mono font-black text-cyan-300 mt-1">
+          <div className="text-lg font-mono font-black text-cyan-700 mt-1">
             {summary.avgWinRate}%
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-[#557063]">
             {lang === 'bn' ? 'স্ট্র্যাটেজিক পারফরম্যান্স' : 'Consistent accuracy'}
           </span>
         </div>
       </div>
 
       {/* 3. D3 SVG Canvas Container with Relative Tooltip */}
-      <div className="relative rounded-2xl bg-[#42001c] border border-[#940042] p-2 sm:p-3 overflow-hidden shadow-inner">
+      <div className="relative rounded-2xl bg-white border border-[#dceee3] p-2 sm:p-3 overflow-hidden shadow-xs">
         {/* Timeframe selector pill inside chart box */}
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/10 text-[10px]">
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1 bg-[#f2f9f5] px-2 py-1 rounded-lg border border-[#cde8d8] text-[10px]">
           <button
             onClick={() => setTimeRange('7d')}
-            className={`px-1.5 py-0.5 rounded font-bold transition ${
-              timeRange === '7d' ? 'bg-[#940042] text-amber-300' : 'text-slate-400 hover:text-white'
+            className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
+              timeRange === '7d' ? 'bg-[#00a859] text-white' : 'text-[#557063] hover:text-[#182620]'
             }`}
           >
             {lang === 'bn' ? '৭ দিন' : '7 Days'}
           </button>
-          <span className="text-white/20">|</span>
+          <span className="text-[#cde8d8]">|</span>
           <button
             onClick={() => setTimeRange('14d')}
-            className={`px-1.5 py-0.5 rounded font-bold transition ${
-              timeRange === '14d' ? 'bg-[#940042] text-amber-300' : 'text-slate-400 hover:text-white'
+            className={`px-1.5 py-0.5 rounded font-bold transition cursor-pointer ${
+              timeRange === '14d' ? 'bg-[#00a859] text-white' : 'text-[#557063] hover:text-[#182620]'
             }`}
           >
             {lang === 'bn' ? '১৪ দিন' : '14 Days'}
@@ -720,27 +720,27 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-3 text-[11px] font-semibold text-slate-300 px-2 pt-1 pb-2">
+        <div className="flex items-center gap-3 text-[11px] font-semibold text-[#557063] px-2 pt-1 pb-2">
           {metric === 'turnoverVsPayout' ? (
             <>
               <div className="flex items-center gap-1.5">
-                <span className="w-3 h-1 rounded bg-[#fbbf24]"></span>
-                <span className="text-amber-300 font-bold">{lang === 'bn' ? 'স্টেক (টার্নওভার)' : 'Stake / Turnover'}</span>
+                <span className="w-3 h-1 rounded bg-[#f59e0b]"></span>
+                <span className="text-amber-700 font-bold">{lang === 'bn' ? 'স্টেক (টার্নওভার)' : 'Stake / Turnover'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-1 rounded bg-[#06b6d4] border-t border-dashed"></span>
-                <span className="text-cyan-300 font-bold">{lang === 'bn' ? 'পেআউট (জিত)' : 'Payout'}</span>
+                <span className="text-cyan-700 font-bold">{lang === 'bn' ? 'পেআউট (জিত)' : 'Payout'}</span>
               </div>
             </>
           ) : (
             <>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-1 rounded bg-[#10b981]"></span>
-                <span className="text-emerald-400 font-bold">{lang === 'bn' ? 'লাভের ট্রেন্ড (Profit)' : 'Profit Trend'}</span>
+                <span className="text-[#00a859] font-bold">{lang === 'bn' ? 'লাভের ট্রেন্ড (Profit)' : 'Profit Trend'}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-1 rounded bg-[#f43f5e]"></span>
-                <span className="text-rose-400 font-bold">{lang === 'bn' ? 'ড্রডাউন (Loss)' : 'Drawdown'}</span>
+                <span className="text-rose-600 font-bold">{lang === 'bn' ? 'ড্রডাউন (Loss)' : 'Drawdown'}</span>
               </div>
             </>
           )}
@@ -762,38 +762,38 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
                 top: Math.max(10, tooltipPos.y - 70),
               }}
             >
-              <div className="w-48 bg-[#1a0510]/95 border border-amber-400/40 rounded-xl p-2.5 shadow-2xl backdrop-blur-md text-white text-xs space-y-1.5">
-                <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                  <span className="font-extrabold text-amber-300">
+              <div className="w-48 bg-white/95 border border-[#bde6cf] rounded-xl p-2.5 shadow-xl backdrop-blur-md text-[#182620] text-xs space-y-1.5">
+                <div className="flex items-center justify-between pb-1 border-b border-[#e5f3eb]">
+                  <span className="font-extrabold text-[#00a859]">
                     {lang === 'bn' ? hoveredPoint.dayLabelBn : hoveredPoint.dayLabel} ({hoveredPoint.date})
                   </span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-slate-300">
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#f2f9f5] border border-[#dceee3] font-mono text-[#557063]">
                     {hoveredPoint.betsCount} {lang === 'bn' ? 'বেট' : 'bets'}
                   </span>
                 </div>
 
                 <div className="space-y-0.5 font-mono text-[11px]">
-                  <div className="flex justify-between text-slate-300">
+                  <div className="flex justify-between text-[#557063]">
                     <span>{lang === 'bn' ? 'টার্নওভার:' : 'Turnover:'}</span>
-                    <span className="font-bold text-amber-300">৳{hoveredPoint.totalStakeTk.toFixed(2)}</span>
+                    <span className="font-bold text-amber-600">৳{hoveredPoint.totalStakeTk.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-300">
+                  <div className="flex justify-between text-[#557063]">
                     <span>{lang === 'bn' ? 'পেআউট:' : 'Payout:'}</span>
-                    <span className="font-bold text-cyan-300">৳{hoveredPoint.totalPayoutTk.toFixed(2)}</span>
+                    <span className="font-bold text-cyan-700">৳{hoveredPoint.totalPayoutTk.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between pt-1 border-t border-white/10">
+                  <div className="flex justify-between pt-1 border-t border-[#e5f3eb]">
                     <span className="font-sans font-bold">{lang === 'bn' ? 'দৈনিক P/L:' : 'Daily P/L:'}</span>
                     <span
                       className={`font-black ${
-                        hoveredPoint.netPnlTk >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                        hoveredPoint.netPnlTk >= 0 ? 'text-[#00a859]' : 'text-rose-600'
                       }`}
                     >
                       {hoveredPoint.netPnlTk >= 0 ? '+' : ''}৳{hoveredPoint.netPnlTk.toFixed(2)}
                     </span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-400">
+                  <div className="flex justify-between text-[10px] text-[#557063]">
                     <span>{lang === 'bn' ? 'সঞ্চিত P/L:' : 'Cumulative:'}</span>
-                    <span className={hoveredPoint.cumulativePnlTk >= 0 ? 'text-emerald-300' : 'text-rose-300'}>
+                    <span className={hoveredPoint.cumulativePnlTk >= 0 ? 'text-[#00a859]' : 'text-rose-600'}>
                       ৳{hoveredPoint.cumulativePnlTk.toFixed(2)}
                     </span>
                   </div>
@@ -804,13 +804,13 @@ export const WeeklyBettingChart: React.FC<WeeklyBettingChartProps> = ({
         </div>
 
         {/* Bottom Helper Hint */}
-        <div className="pt-2 px-1 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-slate-400 gap-1 border-t border-white/5">
+        <div className="pt-2 px-1 flex flex-col sm:flex-row sm:items-center justify-between text-[10px] text-[#557063] gap-1 border-t border-[#e5f3eb]">
           <span>
             {lang === 'bn'
               ? '💡 চার্টের যেকোনো পয়েন্টের উপর মাউস বা আঙুল রেখে বিশদ তথ্য দেখুন'
               : '💡 Hover or touch any data point on the chart for full day breakdown'}
           </span>
-          <span className="text-amber-400/80 font-bold">
+          <span className="text-[#00a859] font-bold">
             {lang === 'bn' ? 'লাইভ ফেয়ার গেম ইঞ্জিন ভেরিফাইড' : 'Live Engine Verified'}
           </span>
         </div>

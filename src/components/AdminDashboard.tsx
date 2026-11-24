@@ -255,23 +255,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-[#182620]">
       {/* Top Banner */}
-      <div className="bg-[#750035] border border-[#940042] rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="bg-white border border-[#cde8d8] rounded-3xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl purple-gradient flex items-center justify-center text-white shadow-lg">
-            <ShieldCheck className="w-6 h-6 text-amber-300" />
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#19c36e] to-[#00994d] flex items-center justify-center text-white shadow-md">
+            <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-extrabold text-white">
+              <h2 className="text-xl font-extrabold text-[#182620]">
                 fb88baji {lang === 'bn' ? 'অ্যাডমিন অপারেশনাল হাব' : 'Admin Hub'}
               </h2>
-              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold">
+              <span className="px-2 py-0.5 rounded-full bg-[#eaf8f0] border border-[#cde8d8] text-[#00a859] text-[10px] font-bold">
                 AUDIT-READY
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-[#557063] mt-0.5">
               Strict double-entry ledger oversight, verified payout approvals, and sports settlements
             </p>
           </div>
@@ -279,7 +279,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={refreshAll}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#47001f] hover:bg-[#940042] text-slate-200 text-xs font-bold border border-[#940042] transition"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#eaf8f0] hover:bg-[#d8f3e4] text-[#00a859] text-xs font-bold border border-[#cde8d8] transition cursor-pointer"
         >
           <RefreshCw className="w-3.5 h-3.5" />
           <span>{lang === 'bn' ? 'রিফ্রেশ ডাটা' : 'Refresh Data'}</span>
@@ -288,10 +288,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {feedback && (
         <div
-          className={`p-3 rounded-2xl text-xs font-medium ${
+          className={`p-3 rounded-2xl text-xs font-bold border ${
             feedback.type === 'success'
-              ? 'bg-emerald-950/40 border border-emerald-500/30 text-emerald-300'
-              : 'bg-rose-950/40 border border-rose-500/30 text-rose-300'
+              ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+              : 'bg-rose-50 border-rose-200 text-rose-800'
           }`}
         >
           {feedback.message}
@@ -299,7 +299,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {/* Admin Module Tabs */}
-      <div className="flex flex-wrap gap-1.5 bg-[#750035] p-1.5 rounded-2xl border border-[#940042]">
+      <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-2xl border border-[#cde8d8] shadow-xs">
         {[
           { id: 'overview', labelBn: 'ওভারভিউ ও দায়বদ্ধতা', labelEn: 'Overview', icon: TrendingDown },
           { id: 'users', labelBn: 'ইউজার ও KYC', labelEn: 'Users & KYC', icon: Users },
@@ -316,8 +316,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onClick={() => setActiveTab(t.id as any)}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
                 isActive
-                  ? 'gold-gradient text-slate-950 shadow-md'
-                  : 'text-slate-300 hover:bg-[#47001f]'
+                  ? 'bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white shadow-sm'
+                  : 'text-[#557063] hover:bg-[#eaf8f0] hover:text-[#182620]'
               }`}
             >
               <Icon className="w-4 h-4" />
@@ -332,49 +332,49 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-6">
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 rounded-2xl bg-[#750035] border border-[#940042] space-y-1">
-              <span className="text-[11px] text-slate-400 font-medium">মোট সফল ডিপোজিট</span>
-              <div className="text-xl font-black text-emerald-400 font-mono">
+            <div className="p-4 rounded-2xl bg-white border border-[#cde8d8] shadow-xs space-y-1">
+              <span className="text-[11px] text-[#557063] font-medium">মোট সফল ডিপোজিট</span>
+              <div className="text-xl font-black text-[#00a859] font-mono">
                 ৳{(overview.totalDepositsSucceededPaisa / 100).toLocaleString()}
               </div>
-              <span className="text-[10px] text-slate-500">MFS Clearing Asset Inflows</span>
+              <span className="text-[10px] text-[#557063]">MFS Clearing Asset Inflows</span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#750035] border border-[#940042] space-y-1">
-              <span className="text-[11px] text-slate-400 font-medium">পরিশোধিত উইথড্রয়াল</span>
-              <div className="text-xl font-black text-white font-mono">
+            <div className="p-4 rounded-2xl bg-white border border-[#cde8d8] shadow-xs space-y-1">
+              <span className="text-[11px] text-[#557063] font-medium">পরিশোধিত উইথড্রয়াল</span>
+              <div className="text-xl font-black text-[#182620] font-mono">
                 ৳{(overview.totalWithdrawalsPaidPaisa / 100).toLocaleString()}
               </div>
-              <span className="text-[10px] text-slate-500">Confirmed Payout Outflows</span>
+              <span className="text-[10px] text-[#557063]">Confirmed Payout Outflows</span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#750035] border border-[#940042] space-y-1">
-              <span className="text-[11px] text-slate-400 font-medium">প্লেয়ার ব্যালেন্স লাইয়াবিলিটি</span>
-              <div className="text-xl font-black text-amber-400 font-mono">
+            <div className="p-4 rounded-2xl bg-white border border-[#cde8d8] shadow-xs space-y-1">
+              <span className="text-[11px] text-[#557063] font-medium">প্লেয়ার ব্যালেন্স লাইয়াবিলিটি</span>
+              <div className="text-xl font-black text-amber-600 font-mono">
                 ৳{(overview.totalUserAvailableLiabilitiesPaisa / 100).toLocaleString()}
               </div>
-              <span className="text-[10px] text-slate-500">Active Customer Claims</span>
+              <span className="text-[10px] text-[#557063]">Active Customer Claims</span>
             </div>
 
-            <div className="p-4 rounded-2xl bg-[#750035] border border-[#940042] space-y-1">
-              <span className="text-[11px] text-slate-400 font-medium">লেজার ব্যালেন্স অডিট স্ট্যাটাস</span>
-              <div className="flex items-center gap-1.5 text-base font-black text-emerald-400 font-mono">
-                <ShieldCheck className="w-5 h-5 text-emerald-400" />
+            <div className="p-4 rounded-2xl bg-white border border-[#cde8d8] shadow-xs space-y-1">
+              <span className="text-[11px] text-[#557063] font-medium">লেজার ব্যালেন্স অডিট স্ট্যাটাস</span>
+              <div className="flex items-center gap-1.5 text-base font-black text-[#00a859] font-mono">
+                <ShieldCheck className="w-5 h-5 text-[#00a859]" />
                 <span>{overview.ledgerAudit?.isBalanced ? 'BALANCED' : 'UNBALANCED'}</span>
               </div>
-              <span className="text-[10px] text-slate-500 font-mono">
+              <span className="text-[10px] text-[#557063] font-mono">
                 Debits == Credits ({overview.ledgerAudit?.count} entries)
               </span>
             </div>
           </div>
 
           {/* Detailed Ledger Health Box */}
-          <div className="p-5 rounded-3xl bg-[#61002a] border border-[#940042] space-y-2">
-            <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          <div className="p-5 rounded-3xl bg-[#eaf8f0] border border-[#cde8d8] space-y-2">
+            <h4 className="text-sm font-extrabold text-[#182620] flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-[#00a859]" />
               <span>ডাবল-এন্ট্রি অ্যাকাউন্টিং নিশ্চয়তা (Double-Entry Balance Verification)</span>
             </h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-[#557063] leading-relaxed">
               প্রতিটি লেনদেনে মোট ডেবিট এবং মোট ক্রেডিট সমান রয়েছে (মোট জার্নাল ডেবিট: ৳
               {(overview.ledgerAudit?.totalDebitsPaisa / 100).toLocaleString()}, মোট ক্রেডিট: ৳
               {(overview.ledgerAudit?.totalCreditsPaisa / 100).toLocaleString()})। সিস্টেম কোনো অবস্থাতেই একতরফা ব্যালেন্স পরিবর্তন অনুমোদন করে না।
@@ -385,18 +385,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: WITHDRAWALS QUEUE */}
       {activeTab === 'withdrawals' && (
-        <div className="bg-[#750035] border border-[#940042] rounded-3xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#940042]">
-            <h3 className="text-sm font-extrabold text-white">
+        <div className="bg-white border border-[#cde8d8] rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e5f3eb]">
+            <h3 className="text-sm font-extrabold text-[#182620]">
               পেন্ডিং ও সাম্প্রতিক উইথড্রয়াল রিকোয়েস্ট
             </h3>
-            <span className="text-xs text-slate-400 font-mono">
+            <span className="text-xs text-[#557063] font-mono">
               মোট: {withdrawals.length} টি
             </span>
           </div>
 
           {withdrawals.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs">
+            <div className="p-8 text-center text-[#557063] text-xs">
               কোনো উইথড্রয়াল আবেদন নেই।
             </div>
           ) : (
@@ -404,37 +404,37 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {withdrawals.map((w) => (
                 <div
                   key={w.id}
-                  className="p-4 rounded-2xl bg-[#61002a] border border-[#940042] flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                  className="p-4 rounded-2xl bg-[#f4fbf7] border border-[#cde8d8] flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-white text-base">
+                      <span className="font-mono font-bold text-[#182620] text-base">
                         ৳{(w.amountPaisa / 100).toLocaleString()}
                       </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#940042] text-amber-300">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase bg-[#eaf8f0] border border-[#cde8d8] text-[#00a859]">
                         {w.method}
                       </span>
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                           w.status === 'PAID'
-                            ? 'bg-emerald-500/20 text-emerald-300'
+                            ? 'bg-emerald-100 text-emerald-700'
                             : w.status === 'REJECTED'
-                            ? 'bg-rose-500/20 text-rose-300'
-                            : 'bg-amber-500/20 text-amber-300'
+                            ? 'bg-rose-100 text-rose-700'
+                            : 'bg-amber-100 text-amber-700'
                         }`}
                       >
                         {w.status}
                       </span>
                     </div>
 
-                    <div className="text-xs text-slate-400">
-                      Destination: <span className="text-slate-200 font-mono">{w.payoutDestination}</span> • User: {w.userId}
+                    <div className="text-xs text-[#557063]">
+                      Destination: <span className="text-[#182620] font-mono font-semibold">{w.payoutDestination}</span> • User: {w.userId}
                     </div>
-                    <div className="text-[10px] text-slate-500 font-mono">
+                    <div className="text-[10px] text-[#557063] font-mono">
                       Ref: {w.providerReference} • {new Date(w.createdAt).toLocaleString()}
                     </div>
                     {w.rejectionReason && (
-                      <div className="text-[11px] text-rose-400 font-medium">
+                      <div className="text-[11px] text-rose-600 font-medium">
                         কারণ: {w.rejectionReason}
                       </div>
                     )}
@@ -446,7 +446,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleApproveWithdrawal(w.id)}
-                          className="px-3.5 py-1.5 rounded-xl gold-gradient text-slate-950 font-bold text-xs shadow hover:brightness-110 transition cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-bold text-xs shadow hover:brightness-105 transition cursor-pointer"
                         >
                           অনুমোদন ও পে-আউট
                         </button>
@@ -455,7 +455,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             setRejectingId(w.id);
                             setRejectionReason('MFS account verification mismatch');
                           }}
-                          className="px-3.5 py-1.5 rounded-xl bg-rose-500/20 text-rose-300 font-bold text-xs hover:bg-rose-500/30 transition cursor-pointer"
+                          className="px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 font-bold text-xs hover:bg-rose-100 transition cursor-pointer"
                         >
                           বাতিল ও অর্থ ফেরত
                         </button>
@@ -467,7 +467,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             value={rejectionReason}
                             onChange={(e) => setRejectionReason(e.target.value)}
                             placeholder="বাতিলের কারণ..."
-                            className="px-2.5 py-1 rounded-lg bg-[#47001f] border border-[#940042] text-xs text-white"
+                            className="px-2.5 py-1 rounded-lg bg-white border border-[#cde8d8] text-xs text-[#182620]"
                           />
                           <button
                             onClick={() => handleRejectWithdrawal(w.id, rejectionReason)}
@@ -477,7 +477,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </button>
                           <button
                             onClick={() => setRejectingId(null)}
-                            className="px-2 py-1 rounded-lg bg-[#47001f] text-slate-300 text-xs cursor-pointer"
+                            className="px-2 py-1 rounded-lg bg-white border border-[#cde8d8] text-[#557063] text-xs cursor-pointer"
                           >
                             বাদ
                           </button>
@@ -494,42 +494,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: USERS & KYC */}
       {activeTab === 'users' && (
-        <div className="bg-[#750035] border border-[#940042] rounded-3xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#940042]">
-            <h3 className="text-sm font-extrabold text-white">প্লেয়ার একাউন্ট ও KYC ম্যানেজমেন্ট</h3>
-            <span className="text-xs text-slate-400">মোট ইউজার: {usersList.length}</span>
+        <div className="bg-white border border-[#cde8d8] rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[#e5f3eb]">
+            <h3 className="text-sm font-extrabold text-[#182620]">প্লেয়ার একাউন্ট ও KYC ম্যানেজমেন্ট</h3>
+            <span className="text-xs text-[#557063]">মোট ইউজার: {usersList.length}</span>
           </div>
 
           <div className="space-y-3">
             {usersList.map((u) => (
               <div
                 key={u.id}
-                className="p-4 rounded-2xl bg-[#61002a] border border-[#940042] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                className="p-4 rounded-2xl bg-[#f4fbf7] border border-[#cde8d8] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
               >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-white text-sm">{u.username}</span>
-                    <span className="text-xs text-slate-400 font-mono">({u.mobile})</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-900/40 text-purple-300 uppercase font-mono">
+                    <span className="font-bold text-[#182620] text-sm">{u.username}</span>
+                    <span className="text-xs text-[#557063] font-mono">({u.mobile})</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#eaf8f0] text-[#00a859] border border-[#cde8d8] uppercase font-mono font-bold">
                       {u.role}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-400">
+                    <span className="text-[#557063]">
                       ব্যালেন্স:{' '}
-                      <strong className="text-emerald-400 font-mono">
+                      <strong className="text-[#00a859] font-mono">
                         ৳{((u.wallet?.availablePaisa || 0) / 100).toLocaleString()}
                       </strong>
                     </span>
-                    <span className="text-slate-400">
-                      KYC: <strong className="text-amber-400">{u.kycStatus}</strong>
+                    <span className="text-[#557063]">
+                      KYC: <strong className="text-amber-600">{u.kycStatus}</strong>
                     </span>
                     {u.isSuspended && (
-                      <span className="text-rose-400 font-bold">[সাসপেন্ডেড]</span>
+                      <span className="text-rose-600 font-bold">[সাসপেন্ডেড]</span>
                     )}
                     {u.isSelfExcluded && (
-                      <span className="text-purple-400 font-bold">[সেলফ-এক্সক্লুডেড]</span>
+                      <span className="text-amber-600 font-bold">[সেলফ-এক্সক্লুডেড]</span>
                     )}
                   </div>
                 </div>
@@ -537,16 +537,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => handleToggleKyc(u.id, u.kycStatus)}
-                    className="px-3 py-1.5 rounded-xl bg-[#940042] text-slate-200 text-xs font-semibold hover:bg-[#384266] transition"
+                    className="px-3 py-1.5 rounded-xl bg-white border border-[#cde8d8] text-[#182620] text-xs font-semibold hover:bg-[#eaf8f0] transition cursor-pointer"
                   >
                     {u.kycStatus === 'VERIFIED' ? 'Revoke KYC' : 'Verify KYC'}
                   </button>
                   <button
                     onClick={() => handleToggleSuspend(u.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer border ${
                       u.isSuspended
-                        ? 'bg-emerald-500/20 text-emerald-300 hover:bg-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-300 hover:bg-rose-500/30'
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'
+                        : 'bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100'
                     }`}
                   >
                     {u.isSuspended ? 'Restore' : 'Suspend'}
@@ -560,33 +560,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: SPORTS SETTLEMENT */}
       {activeTab === 'sports' && (
-        <div className="bg-[#750035] border border-[#940042] rounded-3xl p-5 shadow-xl space-y-4">
-          <div className="pb-3 border-b border-[#940042]">
-            <h3 className="text-sm font-extrabold text-white">স্পোর্টস মার্কেট নিষ্পত্তি ও পে-আউট</h3>
-            <p className="text-xs text-slate-400 mt-1">
+        <div className="bg-white border border-[#cde8d8] rounded-3xl p-5 shadow-sm space-y-4">
+          <div className="pb-3 border-b border-[#e5f3eb]">
+            <h3 className="text-sm font-extrabold text-[#182620]">স্পোর্টস মার্কেট নিষ্পত্তি ও পে-আউট</h3>
+            <p className="text-xs text-[#557063] mt-1">
               যেকোনো ফলাফল নির্ধারণ করলে স্বয়ংক্রিয়ভাবে লেজারের মাধ্যমে সকল বিজয়ী বাজির পে-আউট প্রদান করা হবে।
             </p>
           </div>
 
           <div className="space-y-4">
             {sportsEvents.map((evt) => (
-              <div key={evt.id} className="p-4 rounded-2xl bg-[#61002a] border border-[#940042] space-y-3">
+              <div key={evt.id} className="p-4 rounded-2xl bg-[#f4fbf7] border border-[#cde8d8] space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-white text-sm">
+                  <span className="font-bold text-[#182620] text-sm">
                     {evt.homeTeam} vs {evt.awayTeam} ({evt.league})
                   </span>
-                  <span className="text-xs text-amber-400 uppercase font-mono">{evt.status}</span>
+                  <span className="text-xs text-amber-600 uppercase font-mono font-bold">{evt.status}</span>
                 </div>
 
                 {evt.markets.map((mkt: any) => (
-                  <div key={mkt.id} className="p-3 rounded-xl bg-[#750035] space-y-2">
-                    <div className="text-xs text-slate-300 font-semibold">{mkt.name}</div>
+                  <div key={mkt.id} className="p-3 rounded-xl bg-white border border-[#dceee3] space-y-2">
+                    <div className="text-xs text-[#557063] font-semibold">{mkt.name}</div>
                     <div className="flex flex-wrap gap-2">
                       {mkt.selections.map((sel: any) => (
                         <button
                           key={sel.id}
                           onClick={() => handleSettleMatch(evt.id, mkt.id, sel.id)}
-                          className="px-3 py-1.5 rounded-lg gold-gradient text-slate-950 font-bold text-xs shadow hover:brightness-110 transition flex items-center gap-1 cursor-pointer"
+                          className="px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-bold text-xs shadow hover:brightness-105 transition flex items-center gap-1 cursor-pointer"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>{sel.name} জয়ী নির্ধারণ করুন</span>
@@ -603,20 +603,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: CMS NOTICE */}
       {activeTab === 'cms' && (
-        <form onSubmit={handleUpdateCms} className="bg-[#750035] border border-[#940042] rounded-3xl p-5 shadow-xl space-y-4">
-          <h3 className="text-sm font-extrabold text-white">প্ল্যাটফর্ম ঘোষণা ও নোটিশ এডিটর</h3>
+        <form onSubmit={handleUpdateCms} className="bg-white border border-[#cde8d8] rounded-3xl p-5 shadow-sm space-y-4">
+          <h3 className="text-sm font-extrabold text-[#182620]">প্ল্যাটফর্ম ঘোষণা ও নোটিশ এডিটর</h3>
           <div className="space-y-1">
-            <label className="text-xs text-slate-400">চলমান স্ক্রলিং নোটিশ (বাংলা):</label>
+            <label className="text-xs text-[#557063] font-semibold">চলমান স্ক্রলিং নোটিশ (বাংলা):</label>
             <textarea
               rows={3}
               value={announcementText}
               onChange={(e) => setAnnouncementText(e.target.value)}
-              className="w-full p-3 rounded-2xl bg-[#940042] text-white text-sm focus:outline-hidden focus:ring-2 focus:ring-[#FFC943]"
+              className="w-full p-3 rounded-2xl bg-[#f4fbf7] border border-[#cde8d8] text-[#182620] text-sm focus:outline-hidden focus:ring-2 focus:ring-[#00a859]"
             />
           </div>
           <button
             type="submit"
-            className="px-6 py-2.5 rounded-full gold-gradient text-slate-950 font-black text-xs shadow hover:brightness-110 transition"
+            className="px-6 py-2.5 rounded-full bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-black text-xs shadow hover:brightness-105 transition cursor-pointer"
           >
             বিজ্ঞপ্তি আপডেট করুন
           </button>
@@ -625,22 +625,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* TAB: AUDIT LOGS */}
       {activeTab === 'audit' && (
-        <div className="bg-[#750035] border border-[#940042] rounded-3xl p-5 shadow-xl space-y-3">
-          <h3 className="text-sm font-extrabold text-white pb-2 border-b border-[#940042]">
+        <div className="bg-white border border-[#cde8d8] rounded-3xl p-5 shadow-sm space-y-3">
+          <h3 className="text-sm font-extrabold text-[#182620] pb-2 border-b border-[#e5f3eb]">
             সিস্টেম অডিট ট্রেইল (Immutable Audit Trail)
           </h3>
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {auditLogs.map((log) => (
               <div
                 key={log.id}
-                className="p-3 rounded-xl bg-[#61002a] border border-[#940042] text-xs font-mono flex items-center justify-between"
+                className="p-3 rounded-xl bg-[#f4fbf7] border border-[#cde8d8] text-xs font-mono flex items-center justify-between"
               >
                 <div>
-                  <span className="text-amber-400 font-bold mr-2">[{log.action}]</span>
-                  <span className="text-slate-300">Target: {log.target}</span>
-                  <span className="text-slate-500 ml-2">by {log.actor}</span>
+                  <span className="text-[#00a859] font-bold mr-2">[{log.action}]</span>
+                  <span className="text-[#182620]">Target: {log.target}</span>
+                  <span className="text-[#557063] ml-2">by {log.actor}</span>
                 </div>
-                <span className="text-slate-500 text-[10px]">
+                <span className="text-[#557063] text-[10px]">
                   {new Date(log.timestamp).toLocaleTimeString()}
                 </span>
               </div>

@@ -32,6 +32,9 @@ import type {
   FraudAlert,
   PlayerLiveActivity,
   LiveGatewayConfig,
+  CrashConfig,
+  PromoCodeItem,
+  SuggestionItem,
 } from '../src/types/index.ts';
 import { SEEDED_GAMES } from './gamesCatalog.ts';
 
@@ -117,6 +120,7 @@ export class InMemoryStore {
   users: Map<string, User> = new Map();
   passwords: Map<string, string> = new Map(); // userId -> scrypt password hash
   sessions: Map<string, string> = new Map(); // token -> userId
+  launchTokens: Map<string, { userId: string; gameId: string; apiProviderId?: string; createdAt: number; expiresAt: number }> = new Map();
   wallets: Map<string, Wallet> = new Map();
   journalEntries: JournalEntry[] = [];
   deposits: Map<string, Deposit> = new Map();
@@ -222,6 +226,13 @@ export class InMemoryStore {
   bets: Map<string, Bet> = new Map();
   supportTickets: SupportTicket[] = [];
   auditLogs: AuditLog[] = [];
+  crashConfig: CrashConfig = {
+    instantCrashPercent: 8,
+    houseEdgePercent: 6,
+    maxMultiplier: 50,
+  };
+  promoCodes: PromoCodeItem[] = [];
+  suggestions: SuggestionItem[] = [];
   announcementBn: string = 'fb88baji-তে স্বাগতম! bKash, Nagad এবং Rocket দিয়ে ইনস্ট্যান্ট ৳১০০ থেকে ৳২৫,০০০ ডিপোজিট ও নিরাপদ উইথড্রয়াল সুবিধা। নতুন ইউজারদের জন্য ১০০% ওয়েলকাম বোনাস!';
   banners: Array<{
     id: string;
@@ -518,6 +529,9 @@ export class InMemoryStore {
           liveGatewayConfig: this.liveGatewayConfig,
           playerLiveActivities: this.playerLiveActivities.slice(0, 100),
           fraudAlerts: Array.from(this.fraudAlerts.entries()),
+          crashConfig: this.crashConfig,
+          promoCodes: this.promoCodes,
+          suggestions: this.suggestions.slice(0, 200),
         };
         fs.writeFileSync(this.persistPath, JSON.stringify(payload, null, 2), 'utf-8');
       } catch (err) {
@@ -649,6 +663,19 @@ export class InMemoryStore {
       }
       if (Array.isArray(data.fraudAlerts)) {
         for (const [k, v] of data.fraudAlerts) this.fraudAlerts.set(k, v);
+      }
+      if (data.crashConfig && typeof data.crashConfig === 'object') {
+        this.crashConfig = {
+          instantCrashPercent: Math.max(1, Math.min(35, Number(data.crashConfig.instantCrashPercent) || 8)),
+          houseEdgePercent: Math.max(1, Math.min(25, Number(data.crashConfig.houseEdgePercent) || 6)),
+          maxMultiplier: Math.max(5, Math.min(200, Number(data.crashConfig.maxMultiplier) || 50)),
+        };
+      }
+      if (Array.isArray(data.promoCodes)) {
+        this.promoCodes = data.promoCodes;
+      }
+      if (Array.isArray(data.suggestions)) {
+        this.suggestions = data.suggestions;
       }
     } catch (err) {
       console.error('Failed to load runtime store from disk:', err);
@@ -801,10 +828,75 @@ export class InMemoryStore {
     const domain = hostUrl || 'https://fb88baji.com';
     const referralLink = `${domain}/register?ref=${user.referralCode}`;
 
+    // BDT UTC+6 day boundaries for today/yesterday/month metrics
+    const nowBdt = new Date(Date.now() + 6 * 3600 * 1000);
+    const todayBdt = nowBdt.toISOString().split('T')[0];
+    const yesterdayBdt = new Date(nowBdt.getTime() - 86400 * 1000).toISOString().split('T')[0];
+    const monthPrefix = todayBdt.slice(0, 7); // YYYY-MM
+
+    const toBdtDay = (iso?: string) => {
+      if (!iso) return '';
+      const ms = new Date(iso).getTime();
+      if (!Number.isFinite(ms)) return '';
+      return new Date(ms + 6 * 3600 * 1000).toISOString().split('T')[0];
+    };
+
+    const userRecords = this.referralRecords.filter((r) => r.userId === userId);
+    const todayIncomePaisa = userRecords
+      .filter((r) => r.status === 'SETTLED' && toBdtDay(r.createdAt) === todayBdt)
+      .reduce((sum, r) => sum + (r.amountPaisa || 0), 0);
+    const yesterdayIncomePaisa = userRecords
+      .filter((r) => r.status === 'SETTLED' && toBdtDay(r.createdAt) === yesterdayBdt)
+      .reduce((sum, r) => sum + (r.amountPaisa || 0), 0);
+
+    const registersToday = referees.filter((r) => toBdtDay(r.joinedAt) === todayBdt).length;
+    const registersYesterday = referees.filter((r) => toBdtDay(r.joinedAt) === yesterdayBdt).length;
+    const registersMonth = referees.filter((r) => toBdtDay(r.joinedAt).startsWith(monthPrefix)).length;
+
+    // Real platform-wide totals from actual referralRecords
+    let invitationRewardsPaisa = 0;
+    let invitationClaimedCount = 0;
+    let achievementRewardsPaisa = 0;
+    let achievementClaimedCount = 0;
+    let depositRebatePaisa = 0;
+    let depositClaimedCount = 0;
+    let bettingRebatePaisa = 0;
+    let bettingClaimedCount = 0;
+
+    for (const rec of this.referralRecords) {
+      if (rec.type === 'SIGNUP_BONUS') {
+        invitationRewardsPaisa += rec.amountPaisa || 0;
+        invitationClaimedCount += 1;
+      } else if (rec.type === 'ACHIEVEMENT_REWARD') {
+        achievementRewardsPaisa += rec.amountPaisa || 0;
+        achievementClaimedCount += 1;
+      } else if (rec.type === 'DEPOSIT_REBATE') {
+        depositRebatePaisa += rec.amountPaisa || 0;
+        depositClaimedCount += 1;
+      } else if (rec.type === 'TURNOVER_REBATE' && rec.refereeId !== 'SYSTEM') {
+        bettingRebatePaisa += rec.amountPaisa || 0;
+        bettingClaimedCount += 1;
+      }
+    }
+
+    // Real anonymized leaderboard from actual earners (never fake names)
+    const leaderboard = Array.from(this.users.values())
+      .filter((u) => u.role !== 'admin' && (u.referralTotalEarnedPaisa || 0) > 0)
+      .sort((a, b) => (b.referralTotalEarnedPaisa || 0) - (a.referralTotalEarnedPaisa || 0))
+      .slice(0, 10)
+      .map((u) => {
+        const name = u.username || 'player';
+        const masked = name.length <= 2 ? `${name[0] || 'u'}***` : `${name.slice(0, 2)}***${name.slice(-1)}`;
+        return {
+          maskedUsername: masked,
+          amountTk: Number(((u.referralTotalEarnedPaisa || 0) / 100).toFixed(2)),
+        };
+      });
+
     return {
       referralCode: user.referralCode,
       referralLink,
-      todayCommissionPaisa: user.referralTodayEarnedPaisa || 0,
+      todayCommissionPaisa: todayIncomePaisa || user.referralTodayEarnedPaisa || 0,
       totalCommissionPaisa: user.referralTotalEarnedPaisa || 0,
       claimableCommissionPaisa: user.referralClaimablePaisa || 0,
       totalInvited: referees.length,
@@ -816,6 +908,22 @@ export class InMemoryStore {
       totalTeamTurnoverPaisa,
       achievements,
       settings: this.referralSettings,
+      todayIncomePaisa,
+      yesterdayIncomePaisa,
+      registersToday,
+      registersYesterday,
+      registersMonth,
+      platformTotals: {
+        invitationRewardsTk: Number((invitationRewardsPaisa / 100).toFixed(2)),
+        invitationClaimedCount,
+        achievementRewardsTk: Number((achievementRewardsPaisa / 100).toFixed(2)),
+        achievementClaimedCount,
+        depositRebateTk: Number((depositRebatePaisa / 100).toFixed(2)),
+        depositClaimedCount,
+        bettingRebateTk: Number((bettingRebatePaisa / 100).toFixed(2)),
+        bettingClaimedCount,
+      },
+      leaderboard,
     };
   }
 
@@ -1295,14 +1403,12 @@ export class InMemoryStore {
 
 export function createDefaultAchievementLevels(): ReferralAchievementLevel[] {
   return [
-    { level: 1, title: 'Bronze Inviter', titleBn: 'লেভেল ১ (ব্রোঞ্জ ইনভাইটার)', targetActiveFriends: 3, rewardTk: 300, rewardPaisa: 300 * 100, status: 'LOCKED' },
-    { level: 2, title: 'Silver Ambassador', titleBn: 'লেভেল ২ (সিলভার অ্যাম্বাসেডর)', targetActiveFriends: 10, rewardTk: 1200, rewardPaisa: 1200 * 100, status: 'LOCKED' },
-    { level: 3, title: 'Gold Elite', titleBn: 'লেভেল ৩ (গোল্ড এলিট)', targetActiveFriends: 25, rewardTk: 3500, rewardPaisa: 3500 * 100, status: 'LOCKED' },
-    { level: 4, title: 'Platinum Partner', titleBn: 'লেভেল ৪ (প্লাটিনাম পার্টনার)', targetActiveFriends: 50, rewardTk: 8000, rewardPaisa: 8000 * 100, status: 'LOCKED' },
-    { level: 5, title: 'Diamond Master', titleBn: 'লেভেল ৫ (ডায়মন্ড মাস্টার)', targetActiveFriends: 100, rewardTk: 20000, rewardPaisa: 20000 * 100, status: 'LOCKED' },
-    { level: 6, title: 'Crown Legend', titleBn: 'লেভেল ৬ (ক্রাউন লিজেন্ড)', targetActiveFriends: 250, rewardTk: 55000, rewardPaisa: 55000 * 100, status: 'LOCKED' },
-    { level: 7, title: 'Grand Champion', titleBn: 'লেভেল ৭ (গ্র্যান্ড চ্যাম্পিয়ন)', targetActiveFriends: 500, rewardTk: 125000, rewardPaisa: 125000 * 100, status: 'LOCKED' },
-    { level: 8, title: 'Fb88 King Club', titleBn: 'লেভেল ৮ (এফবি৮৮ কিং ক্লাব)', targetActiveFriends: 1000, rewardTk: 300000, rewardPaisa: 300000 * 100, status: 'LOCKED' },
+    { level: 1, title: 'Over 5 valid referral in total.', titleBn: 'মোট ৫+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 5, rewardTk: 388, rewardPaisa: 388 * 100, status: 'LOCKED' },
+    { level: 2, title: 'Over 20 valid referral in total.', titleBn: 'মোট ২০+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 20, rewardTk: 1588, rewardPaisa: 1588 * 100, status: 'LOCKED' },
+    { level: 3, title: 'Over 50 valid referral in total.', titleBn: 'মোট ৫০+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 50, rewardTk: 3988, rewardPaisa: 3988 * 100, status: 'LOCKED' },
+    { level: 4, title: 'Over 100 valid referral in total.', titleBn: 'মোট ১০০+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 100, rewardTk: 8888, rewardPaisa: 8888 * 100, status: 'LOCKED' },
+    { level: 5, title: 'Over 200 valid referral in total.', titleBn: 'মোট ২০০+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 200, rewardTk: 16888, rewardPaisa: 16888 * 100, status: 'LOCKED' },
+    { level: 6, title: 'Over 500 valid referral in total.', titleBn: 'মোট ৫০০+ সক্রিয় রেফারেল অর্জন', targetActiveFriends: 500, rewardTk: 39888, rewardPaisa: 39888 * 100, status: 'LOCKED' },
   ];
 }
 

@@ -100,6 +100,49 @@ export interface User {
   lastDailyRewardClaimedAt?: string;
   claimedMissions?: Record<string, string>;
   readMessageIds?: string[];
+  nickname?: string;
+  points?: number;
+  vipProgress?: number;
+  vipTarget?: number;
+  signInStreak?: number;
+  lastSignInDate?: string;
+  signInTotalBonusTk?: number;
+  growthDaysClaimed?: number[];
+  luckySpinDaysClaimed?: number[];
+  lastLuckySpinDate?: string;
+  claimedRescueDates?: string[];
+  claimedVouchers?: Record<string, string>;
+  redeemedPromoCodes?: string[];
+}
+
+export interface CrashConfig {
+  instantCrashPercent: number;
+  houseEdgePercent: number;
+  maxMultiplier: number;
+}
+
+export interface PromoCodeItem {
+  id: string;
+  code: string;
+  rewardTk: number;
+  minDepositTk: number;
+  maxUses: number;
+  usedCount: number;
+  usedByUserIds: string[];
+  expiresAt: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface SuggestionItem {
+  id: string;
+  userId: string;
+  username: string;
+  category: string;
+  message: string;
+  reply?: string;
+  status: 'NEW' | 'REVIEWED';
+  createdAt: string;
 }
 
 export interface FraudAlert {
@@ -285,6 +328,15 @@ export interface CasinoApiConfig {
   secretKey: string;
   seamlessWalletCallbackUrl: string;
   currency: 'BDT' | string;
+  authType?: 'bearer' | 'x-api-key' | 'hmac-sha256' | 'md5-sign' | 'basic' | 'custom-header' | 'none';
+  customHeaderName?: string;
+  gamesListEndpoint?: string;
+  gamesListMethod?: 'GET' | 'POST';
+  launchEndpoint?: string;
+  launchMethod?: 'POST' | 'GET' | 'DIRECT_URL';
+  playerPrefix?: string;
+  webhookSecret?: string;
+  extraHeadersJson?: string;
   latencyMs?: number;
   lastPingAt?: string;
   totalGamesIntegrated: number;
@@ -591,5 +643,24 @@ export interface ReferralSummary {
   totalTeamTurnoverPaisa: number;
   achievements: ReferralAchievementLevel[];
   settings: ReferralSettings;
+  todayIncomePaisa?: number;
+  yesterdayIncomePaisa?: number;
+  registersToday?: number;
+  registersYesterday?: number;
+  registersMonth?: number;
+  platformTotals?: {
+    invitationRewardsTk: number;
+    invitationClaimedCount: number;
+    achievementRewardsTk: number;
+    achievementClaimedCount: number;
+    depositRebateTk: number;
+    depositClaimedCount: number;
+    bettingRebateTk: number;
+    bettingClaimedCount: number;
+  };
+  leaderboard?: Array<{
+    maskedUsername: string;
+    amountTk: number;
+  }>;
 }
 

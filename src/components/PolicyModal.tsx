@@ -75,31 +75,31 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#42001c] border border-[#940042] rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#f4fbf7] border border-[#cde8d8] rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 animate-in zoom-in-95 duration-200">
         {/* Top Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-[#6e0030] via-[#520024] to-[#42001c] border-b border-[#940042] flex items-center justify-between">
+        <div className="p-4 sm:p-5 bg-gradient-to-r from-[#0a4a2c] via-[#0e623a] to-[#00994d] border-b border-emerald-500/30 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Fb88BajiLogo size="sm" />
+            <Fb88BajiLogo size="sm" variant="dark" />
             <div>
               <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
                 <span>{lang === 'bn' ? 'অফিসিয়াল নীতিমালা ও নিয়মাবলী' : 'Official Policies & Regulations'}</span>
-                <span className="px-2 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black">
+                <span className="px-2 py-0.5 rounded-full bg-white text-[#059669] text-[10px] font-black">
                   VERIFIED
                 </span>
               </h2>
-              <p className="text-[11px] text-rose-200">Fb88baji Official Regulatory Compliance & Fair Gaming</p>
+              <p className="text-[11px] text-emerald-100">Fb88baji Official Regulatory Compliance & Fair Gaming</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             {/* Lang switch */}
-            <div className="flex bg-black/40 rounded-xl p-0.5 border border-[#940042]">
+            <div className="flex bg-black/25 rounded-xl p-0.5 border border-white/20">
               <button
                 type="button"
                 onClick={() => setLang('bn')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                  lang === 'bn' ? 'bg-[#940042] text-white' : 'text-slate-400 hover:text-white'
+                  lang === 'bn' ? 'bg-white text-[#059669]' : 'text-emerald-100 hover:text-white'
                 }`}
               >
                 বাংলা
@@ -108,7 +108,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 type="button"
                 onClick={() => setLang('en')}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition ${
-                  lang === 'en' ? 'bg-[#940042] text-white' : 'text-slate-400 hover:text-white'
+                  lang === 'en' ? 'bg-white text-[#059669]' : 'text-emerald-100 hover:text-white'
                 }`}
               >
                 EN
@@ -117,7 +117,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-slate-300 hover:text-white flex items-center justify-center transition"
+              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -125,7 +125,7 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center overflow-x-auto no-scrollbar bg-[#330015] border-b border-[#780036] px-3 py-1.5 gap-1.5">
+        <div className="flex items-center overflow-x-auto no-scrollbar bg-white border-b border-[#dceee3] px-3 py-2 gap-1.5">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeSection === tab.id;
@@ -135,11 +135,11 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
                 onClick={() => setActiveSection(tab.id)}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
                   isActive
-                    ? 'bg-[#ba0050] text-white shadow-md'
-                    : 'text-rose-200/80 hover:bg-white/5 hover:text-white'
+                    ? 'bg-[#00a859] text-white shadow-sm'
+                    : 'text-[#4a6b5a] hover:bg-[#eaf8f0] hover:text-[#059669]'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-amber-300' : 'text-rose-300'}`} />
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-[#059669]'}`} />
                 <span>{lang === 'bn' ? tab.labelBn : tab.labelEn}</span>
               </button>
             );
@@ -147,17 +147,17 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         </div>
 
         {/* Scrollable Content Body */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 text-slate-100 text-xs sm:text-sm leading-relaxed">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 text-[#182620] text-xs sm:text-sm leading-relaxed">
           {/* 1. 18+ POLICY */}
           {activeSection === '18plus' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-red-950/70 to-rose-950/70 border border-red-500/40 flex items-start gap-3">
-                <ShieldAlert className="w-6 h-6 text-red-400 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 flex items-start gap-3">
+                <ShieldAlert className="w-6 h-6 text-rose-600 shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-base font-black text-red-300">
+                  <h3 className="text-base font-black text-rose-700">
                     {lang === 'bn' ? '১৮+ বয়স সীমা ও কঠোর অপ্রাপ্তবয়স্ক সুরক্ষা নীতি' : 'Strict 18+ Age Requirement & Minor Protection'}
                   </h3>
-                  <p className="text-xs text-rose-200 mt-1">
+                  <p className="text-xs text-rose-800/80 mt-1">
                     {lang === 'bn'
                       ? 'Fb88baji প্ল্যাটফর্মে বাজি ধরা বা ক্যাসিনো গেম খেলার জন্য ব্যবহারকারীর বয়স বাধ্যতামূলকভাবে ১৮ বছর বা তার বেশি হতে হবে।'
                       : 'Underage gambling is an offence. You must be at least 18 years old to access and place bets on Fb88baji.'}
@@ -166,24 +166,24 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038] space-y-2">
-                  <h4 className="font-bold text-amber-300 flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="p-4 rounded-2xl bg-white border border-[#dceee3] space-y-2 shadow-2xs">
+                  <h4 className="font-bold text-[#059669] flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-[#00a859]" />
                     {lang === 'bn' ? 'বয়স যাচাইকরণ প্রক্রিয়া' : 'Age Verification Procedure'}
                   </h4>
-                  <p className="text-xs text-rose-100 leading-relaxed">
+                  <p className="text-xs text-[#4a6b5a] leading-relaxed">
                     {lang === 'bn'
                       ? 'প্রতিটি নিবন্ধিত অ্যাকাউন্টকে জাতীয় পরিচয়পত্র (NID), পাসপোর্ট বা ড্রাইভিং লাইসেন্স দিয়ে বয়স প্রমাণ করতে হয়। অপ্রাপ্তবয়স্ক কোনো ব্যক্তির অ্যাকাউন্ট শনাক্ত হলে তা তাৎক্ষণিকভাবে স্থায়ীভাবে বাতিল (Banned) করা হয়।'
                       : 'All players are subject to identity verification. Any account suspected of belonging to an individual under 18 years old will be suspended and permanently terminated.'}
                   </p>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038] space-y-2">
-                  <h4 className="font-bold text-amber-300 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                <div className="p-4 rounded-2xl bg-white border border-[#dceee3] space-y-2 shadow-2xs">
+                  <h4 className="font-bold text-[#059669] flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-amber-500" />
                     {lang === 'bn' ? 'অভিভাবকদের জন্য পরামর্শ' : 'Parental Controls Advice'}
                   </h4>
-                  <p className="text-xs text-rose-100 leading-relaxed">
+                  <p className="text-xs text-[#4a6b5a] leading-relaxed">
                     {lang === 'bn'
                       ? 'যদি আপনার পরিবারের সাথে ডিভাইস শেয়ার করা হয়, তবে Net Nanny বা CyberPatrol এর মতো প্যারেন্টাল কন্ট্রোল সফটওয়্যার ব্যবহার করে অপ্রাপ্তবয়স্কদের অ্যাক্সেস ব্লক করুন এবং আপনার লগইন তথ্য গোপন রাখুন।'
                       : 'We encourage parents to use filtering software such as Net Nanny or CyberPatrol to prevent underage family members from accessing real money gaming sites.'}
@@ -196,13 +196,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 2. RESPONSIBLE GAMING */}
           {activeSection === 'responsible' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 flex items-start gap-3">
-                <HeartHandshake className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="p-4 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce] flex items-start gap-3">
+                <HeartHandshake className="w-6 h-6 text-[#00a859] shrink-0 mt-0.5" />
                 <div>
-                  <h3 className="text-base font-black text-emerald-300">
+                  <h3 className="text-base font-black text-[#059669]">
                     {lang === 'bn' ? 'দায়িত্বশীল গেমিং নীতিমালা (Responsible Gaming Policy)' : 'Responsible Gaming & Player Well-Being'}
                   </h3>
-                  <p className="text-xs text-emerald-100 mt-1">
+                  <p className="text-xs text-[#28503c] mt-1">
                     {lang === 'bn'
                       ? 'গেমিং শুধুমাত্র বিনোদনের জন্য। কখনই জীবিকা অর্জনের উপায় বা ঋণের সমাধান হিসেবে বিবেচনা করবেন না।'
                       : 'Gambling should always be entertaining. Never gamble with money you cannot afford to lose.'}
@@ -211,36 +211,36 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
 
               <div className="space-y-3">
-                <h4 className="font-extrabold text-white text-sm">
+                <h4 className="font-extrabold text-[#182620] text-sm">
                   {lang === 'bn' ? 'আমাদের নিয়ন্ত্রিত গেমিং টুলস ও সুরক্ষাসমূহ:' : 'Our Controlled Gaming Tools & Safeguards:'}
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-2xl bg-[#540026] border border-[#800038]">
-                    <div className="font-bold text-amber-300 text-xs">🔒 সেলফ-এক্সক্লুশন (Self-Exclusion)</div>
-                    <div className="text-[11px] text-rose-200 mt-1">
+                  <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3]">
+                    <div className="font-bold text-[#059669] text-xs">🔒 সেলফ-এক্সক্লুশন (Self-Exclusion)</div>
+                    <div className="text-[11px] text-[#4a6b5a] mt-1">
                       {lang === 'bn' ? '২৪ ঘণ্টা থেকে ৬ মাস পর্যন্ত সাময়িকভাবে অ্যাকাউন্ট লক করে গেমিং বিরতি নিন।' : 'Take a break by locking your account temporarily for 24h to 6 months.'}
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-[#540026] border border-[#800038]">
-                    <div className="font-bold text-amber-300 text-xs">💰 দৈনিক ডিপোজিট লিমিট</div>
-                    <div className="text-[11px] text-rose-200 mt-1">
+                  <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3]">
+                    <div className="font-bold text-[#059669] text-xs">💰 দৈনিক ডিপোজিট লিমিট</div>
+                    <div className="text-[11px] text-[#4a6b5a] mt-1">
                       {lang === 'bn' ? 'প্রতিদিনের জন্য সর্বোচ্চ জমা করার টাকার পরিমাণ সীমাবদ্ধ করতে পারেন।' : 'Set a maximum daily deposit threshold to budget your spending.'}
                     </div>
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-[#540026] border border-[#800038]">
-                    <div className="font-bold text-amber-300 text-xs">⏱️ রিয়েলিটি চেক টাইমার</div>
-                    <div className="text-[11px] text-rose-200 mt-1">
+                  <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3]">
+                    <div className="font-bold text-[#059669] text-xs">⏱️ রিয়েলিটি চেক টাইমার</div>
+                    <div className="text-[11px] text-[#4a6b5a] mt-1">
                       {lang === 'bn' ? 'নির্দিষ্ট সময় অন্তর সেশন নোটিফিকেশন দিয়ে সময় ও ব্যালেন্স ব্যয়ের সতর্কবার্তা।' : 'Regular popup reminders showing time spent and net wagering results.'}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#2b0012] border border-[#780036] text-xs space-y-1.5">
-                <div className="font-bold text-rose-300">সাহায্যের জন্য আন্তর্জাতিক সংস্থা:</div>
-                <div className="text-slate-300">GamCare (www.gamcare.org.uk) • Gambling Therapy (www.gamblingtherapy.org) • BeGambleAware</div>
+              <div className="p-4 rounded-2xl bg-white border border-[#dceee3] text-xs space-y-1.5">
+                <div className="font-bold text-[#059669]">সাহায্যের জন্য আন্তর্জাতিক সংস্থা:</div>
+                <div className="text-[#4a6b5a]">GamCare (www.gamcare.org.uk) • Gambling Therapy (www.gamblingtherapy.org) • BeGambleAware</div>
               </div>
             </div>
           )}
@@ -248,11 +248,11 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 3. RULES & REGULATIONS */}
           {activeSection === 'rules' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038]">
-                <h3 className="text-base font-black text-amber-300 mb-2">
+              <div className="p-4 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce]">
+                <h3 className="text-base font-black text-[#059669] mb-2">
                   {lang === 'bn' ? 'গেমিং নিয়ম ও বাজি নীতিমালা (Rules & Regulations)' : 'General Gaming & Wagering Regulations'}
                 </h3>
-                <p className="text-xs text-rose-100">
+                <p className="text-xs text-[#28503c]">
                   {lang === 'bn'
                     ? 'Fb88baji-তে অ্যাকাউন্ট পরিচালনা, স্পোর্টস বাজি এবং ক্যাসিনো খেলার জন্য প্রযোজ্য আবশ্যিক নিয়মাবলী।'
                     : 'Mandatory operational rules governing accounts, sports betting, and casino games on Fb88baji.'}
@@ -260,27 +260,27 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
 
               <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-amber-400 text-xs">১. এক ব্যক্তি, এক অ্যাকাউন্ট (Single Account Rule)</div>
-                  <p className="text-xs text-slate-300">
+                <div className="p-3.5 rounded-xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669] text-xs">১. এক ব্যক্তি, এক অ্যাকাউন্ট (Single Account Rule)</div>
+                  <p className="text-xs text-[#4a6b5a]">
                     {lang === 'bn'
                       ? 'প্রতিজন ব্যবহারকারী শুধুমাত্র একটি অ্যাকাউন্ট পরিচালনা করতে পারবেন। একই আইপি, ফোন বা ব্যাংক তথ্যে একাধিক অ্যাকাউন্ট পাওয়া গেলে সব অ্যাকাউন্ট স্থগিত এবং ফান্ড বাতিল করা হবে।'
                       : 'Strictly one account per individual, household, phone number, and IP address. Duplicate accounts will be terminated.'}
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-amber-400 text-xs">২. স্পোর্টস বেটিং সেটেলমেন্ট (Sportsbook Settlement)</div>
-                  <p className="text-xs text-slate-300">
+                <div className="p-3.5 rounded-xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669] text-xs">২. স্পোর্টস বেটিং সেটেলমেন্ট (Sportsbook Settlement)</div>
+                  <p className="text-xs text-[#4a6b5a]">
                     {lang === 'bn'
                       ? 'অফিসিয়াল ম্যাচ ফলাফলের উপর ভিত্তি করে বাজি নিষ্পত্তি করা হবে। বৃষ্টি বা কোনো কারণে ম্যাচ বাতিল হলে প্রবিধান অনুযায়ী রিফান্ড বা রোলওভার নির্ধারিত হবে।'
                       : 'All bets are settled based on official governing body results. Abandoned or void matches will be handled according to international bookmaking rules.'}
                   </p>
                 </div>
 
-                <div className="p-3.5 rounded-xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-amber-400 text-xs">৩. সফটওয়্যার ফেয়ার-প্লে (Fair Play Guarantee)</div>
-                  <p className="text-xs text-slate-300">
+                <div className="p-3.5 rounded-xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669] text-xs">৩. সফটওয়্যার ফেয়ার-প্লে (Fair Play Guarantee)</div>
+                  <p className="text-xs text-[#4a6b5a]">
                     {lang === 'bn'
                       ? 'সকল স্লট এবং লাইভ ক্যাসিনো গেম আন্তর্জাতিকভাবে প্রত্যয়িত সার্টিফাইড RNG (Random Number Generator) দ্বারা পরিচালিত। কোনো বট বা অনৈতিক কৌশল ব্যবহার সম্পূর্ণ নিষিদ্ধ।'
                       : 'All casino games utilize certified RNG technology ensuring completely random, unbiased outcomes. Any use of automated bot software results in immediate permanent ban.'}
@@ -293,11 +293,11 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 4. KYC POLICY */}
           {activeSection === 'kyc' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038]">
-                <h3 className="text-base font-black text-amber-300 mb-2">
+              <div className="p-4 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce]">
+                <h3 className="text-base font-black text-[#059669] mb-2">
                   {lang === 'bn' ? 'কেওয়াইসি ও আইডেন্টিটি ভেরিফিকেশন নীতি (KYC Policy)' : 'Know Your Customer (KYC) & AML Policy'}
                 </h3>
-                <p className="text-xs text-rose-100">
+                <p className="text-xs text-[#28503c]">
                   {lang === 'bn'
                     ? 'অর্থপাচার রোধ ও প্লেয়ারদের একাউন্টের নিরঙ্কুশ নিরাপত্তা নিশ্চিতে আন্তর্জাতিক AML আইন মেনে KYC সম্পন্ন করা বাধ্যতামূলক।'
                     : 'To comply with international Anti-Money Laundering (AML) standards and protect player funds, mandatory KYC verification is required.'}
@@ -305,18 +305,18 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-black/30 border border-[#780036] space-y-2">
-                  <div className="font-bold text-emerald-400 text-xs">প্রয়োজনীয় ডকুমেন্টসমূহ:</div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                <div className="p-4 rounded-2xl bg-white border border-[#dceee3] space-y-2">
+                  <div className="font-bold text-[#059669] text-xs">প্রয়োজনীয় ডকুমেন্টসমূহ:</div>
+                  <ul className="text-xs text-[#4a6b5a] space-y-1.5 list-disc pl-4">
                     <li>জাতীয় পরিচয়পত্র (NID) / স্মার্ট কার্ড এর স্পষ্ট উভয় পাশের ছবি।</li>
                     <li>অথবা বৈধ পাসপোর্ট বা বাংলাদেশ ড্রাইভিং লাইসেন্স।</li>
                     <li>মোবাইল ব্যাংকিং (বিকাশ / নগদ) একাউন্টের মালিকানার প্রমাণ।</li>
                   </ul>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-black/30 border border-[#780036] space-y-2">
-                  <div className="font-bold text-amber-400 text-xs">ভেরিফিকেশন সম্পন্ন করার নিয়ম:</div>
-                  <ul className="text-xs text-slate-300 space-y-1.5 list-disc pl-4">
+                <div className="p-4 rounded-2xl bg-white border border-[#dceee3] space-y-2">
+                  <div className="font-bold text-[#059669] text-xs">ভেরিফিকেশন সম্পন্ন করার নিয়ম:</div>
+                  <ul className="text-xs text-[#4a6b5a] space-y-1.5 list-disc pl-4">
                     <li>অ্যাকাউন্টের "Personal Information" বা KYC মেনু থেকে ফাইল আপলোড করুন।</li>
                     <li>সাধারণত ১২ থেকে ২৪ ঘণ্টার মধ্যে অ্যাডমিন টিম দ্বারা ভেরিফাই করা হয়।</li>
                     <li>KYC ভেরিফাইড হলে সর্বোচ্চ উইথড্রয়াল লিমিট সুবিধা পাওয়া যায়।</li>
@@ -329,32 +329,32 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 5. TERMS & CONDITIONS */}
           {activeSection === 'terms' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038]">
-                <h3 className="text-base font-black text-amber-300 mb-2">
+              <div className="p-4 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce]">
+                <h3 className="text-base font-black text-[#059669] mb-2">
                   {lang === 'bn' ? 'সাধারণ শর্তাবলী (Terms & Conditions)' : 'General Terms and User Agreement'}
                 </h3>
-                <p className="text-xs text-rose-100">
+                <p className="text-xs text-[#28503c]">
                   {lang === 'bn'
                     ? 'Fb88baji-তে নিবন্ধন ও ব্যবহারের মাধ্যমে আপনি নিম্নলিখিত সকল শর্তাবলীতে সম্মতি প্রদান করছেন।'
                     : 'By opening an account and using Fb88baji, you accept and agree to all user terms below.'}
                 </p>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-200">
-                <div className="p-3 rounded-xl bg-black/30 border border-[#780036]">
-                  <strong className="text-white">১. ডিপোজিট ও ব্যালেন্স: </strong>
+              <div className="space-y-3 text-xs text-[#4a6b5a]">
+                <div className="p-3 rounded-xl bg-white border border-[#dceee3]">
+                  <strong className="text-[#182620]">১. ডিপোজিট ও ব্যালেন্স: </strong>
                   {lang === 'bn'
                     ? 'প্লেয়ারকে নিজের নামীয় বিকাশ, নগদ বা রকেট অ্যাকাউন্ট থেকে টাকা পাঠাতে হবে এবং সঠিক ট্রানজেকশন আইডি ও স্লিপ জমা দিতে হবে। ভুয়া TrxID দিলে অ্যাকাউন্ট লক করা হবে।'
                     : 'Deposits must be made from personal mobile wallets. Fraudulent Transaction IDs will lead to instant ID suspension.'}
                 </div>
-                <div className="p-3 rounded-xl bg-black/30 border border-[#780036]">
-                  <strong className="text-white">২. উইথড্রয়াল নীতি: </strong>
+                <div className="p-3 rounded-xl bg-white border border-[#dceee3]">
+                  <strong className="text-[#182620]">২. উইথড্রয়াল নীতি: </strong>
                   {lang === 'bn'
                     ? 'ডিপোজিটকৃত টাকার ন্যূনতম ১x টার্নওভার সম্পন্ন করতে হবে। প্লেয়ারের ওয়ালেটে নূন্যতম ৫০০ টাকা থাকলে উইথড্র আবেদন গ্রহণ করা হয়।'
                     : 'Deposited funds require a minimum 1x turnover before withdrawal can be processed.'}
                 </div>
-                <div className="p-3 rounded-xl bg-black/30 border border-[#780036]">
-                  <strong className="text-white">৩. প্রচারমূলক বোনাস: </strong>
+                <div className="p-3 rounded-xl bg-white border border-[#dceee3]">
+                  <strong className="text-[#182620]">৩. প্রচারমূলক বোনাস: </strong>
                   {lang === 'bn'
                     ? 'যেকোনো বোনাসের সাথে সম্পর্কিত রোলওভার বা ওয়াগারিং পূরণ সাপেক্ষে উইথড্র করা যাবে। বোনাস জালিয়াতি সনাক্ত হলে অ্যাডমিন বোনাস প্রত্যাহার করার অধিকার রাখে।'
                     : 'Promotions and bonuses have strict rollover criteria. Bonus abuse will result in forfeiture of winnings.'}
@@ -366,18 +366,18 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 6. PRIVACY POLICY */}
           {activeSection === 'privacy' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-[#540026] border border-[#800038]">
-                <h3 className="text-base font-black text-amber-300 mb-2">
+              <div className="p-4 rounded-2xl bg-[#eaf8f0] border border-[#bce6ce]">
+                <h3 className="text-base font-black text-[#059669] mb-2">
                   {lang === 'bn' ? 'গোপনীয়তা ও ডেটা সুরক্ষা নীতি (Privacy Policy)' : 'Privacy Policy & Data Protection'}
                 </h3>
-                <p className="text-xs text-rose-100">
+                <p className="text-xs text-[#28503c]">
                   {lang === 'bn'
                     ? 'আপনার ব্যক্তিগত তথ্যের নিরাপত্তা আমাদের সর্বোচ্চ অগ্রাধিকার। আমরা কীভাবে আপনার ডেটা সংগ্রহ ও সুরক্ষিত রাখি।'
                     : 'We are committed to safeguarding your personal data with high-grade cryptographic security.'}
                 </p>
               </div>
 
-              <div className="space-y-3 text-xs text-slate-200">
+              <div className="space-y-3 text-xs text-[#4a6b5a] bg-white p-4 rounded-2xl border border-[#dceee3]">
                 <p>
                   {lang === 'bn'
                     ? '• তথ্য এনক্রিপশন: সমস্ত ট্রানজেকশন এবং পাসওয়ার্ড আন্তর্জাতিক মানের ২৫৬-বিট SSL এনক্রিপশন দ্বারা সুরক্ষিত।'
@@ -400,15 +400,15 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
           {/* 7. ABOUT US */}
           {activeSection === 'about' && (
             <div className="space-y-4">
-              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#6e0030] to-[#42001c] border border-[#940042] space-y-3">
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#0a4a2c] to-[#00994d] border border-emerald-500/40 space-y-3">
                 <div className="flex items-center gap-3">
-                  <Fb88BajiLogo size="md" />
+                  <Fb88BajiLogo size="md" variant="dark" />
                   <div>
                     <h3 className="text-base font-black text-white">Fb88baji - Best Quality Platform</h3>
-                    <p className="text-xs text-amber-300 font-semibold">বাংলাদেশের বিশ্বস্ত স্পোর্টস ও অনলাইন ক্যাসিনো গেমিং</p>
+                    <p className="text-xs text-emerald-100 font-semibold">বাংলাদেশের বিশ্বস্ত স্পোর্টস ও অনলাইন ক্যাসিনো গেমিং</p>
                   </div>
                 </div>
-                <p className="text-xs text-rose-100 leading-relaxed">
+                <p className="text-xs text-emerald-50/90 leading-relaxed">
                   {lang === 'bn'
                     ? 'Fb88baji হলো বাংলাদেশের অন্যতম শীর্ষস্থানীয় স্পোর্টস বেটিং ও অনলাইন ক্যাসিনো এন্টারটেইনমেন্ট প্ল্যাটফর্ম। আমরা ক্রিকেট, ফুটবল, লাইভ ক্যাসিনো, স্লট ও ক্র্যাশ গেমসের বিশাল সমাহার নিয়ে এসেছি সম্পূর্ণ সুরক্ষিত ও ফেয়ার এনভায়রনমেন্টে।'
                     : 'Fb88baji is the premier sports betting and online casino destination in Bangladesh, offering cricket exchanges, live dealer rooms, slots, and crash games with instant payouts.'}
@@ -416,17 +416,17 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="p-3.5 rounded-2xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-amber-300">⚡ দ্রুততম লেনদেন</div>
-                  <div className="text-slate-300 text-[11px]">বিকাশ, নগদ ও রকেটে ৫-১০ মিনিটের মধ্যে ইনস্ট্যান্ট ডিপোজিট ও উইথড্রয়াল।</div>
+                <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669]">⚡ দ্রুততম লেনদেন</div>
+                  <div className="text-[#4a6b5a] text-[11px]">বিকাশ, নগদ ও রকেটে ৫-১০ মিনিটের মধ্যে ইনস্ট্যান্ট ডিপোজিট ও উইথড্রয়াল।</div>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-emerald-400">🛡️ লাইসেন্সপ্রাপ্ত ও সার্টিফাইড</div>
-                  <div className="text-slate-300 text-[11px]">Gaming Curacao ও Anjouan eGaming এর আন্তর্জাতিক নিয়ন্ত্রক সনদপ্রাপ্ত।</div>
+                <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669]">🛡️ লাইসেন্সপ্রাপ্ত ও সার্টিফাইড</div>
+                  <div className="text-[#4a6b5a] text-[11px]">Gaming Curacao ও Anjouan eGaming এর আন্তর্জাতিক নিয়ন্ত্রক সনদপ্রাপ্ত।</div>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-black/30 border border-[#780036] space-y-1">
-                  <div className="font-bold text-teal-300">🎧 ২৪/৭ লাইভ সাপোর্ট</div>
-                  <div className="text-slate-300 text-[11px]">যেকোনো প্রয়োজনে ২৪ ঘণ্টা সার্বক্ষণিক বাংলা কাস্টমার কেয়ার সার্ভিস।</div>
+                <div className="p-3.5 rounded-2xl bg-white border border-[#dceee3] space-y-1">
+                  <div className="font-bold text-[#059669]">🎧 ২৪/৭ লাইভ সাপোর্ট</div>
+                  <div className="text-[#4a6b5a] text-[11px]">যেকোনো প্রয়োজনে ২৪ ঘণ্টা সার্বক্ষণিক বাংলা কাস্টমার কেয়ার সার্ভিস।</div>
                 </div>
               </div>
             </div>
@@ -434,13 +434,13 @@ export const PolicyModal: React.FC<PolicyModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 bg-[#330015] border-t border-[#780036] flex items-center justify-between">
-          <div className="text-[11px] text-rose-300 font-medium">
+        <div className="p-4 bg-white border-t border-[#dceee3] flex items-center justify-between">
+          <div className="text-[11px] text-[#4a6b5a] font-medium">
             © 2026 Fb88baji. All Rights Reserved. Gaming Curacao License No. 365/JAZ.
           </div>
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl gold-accent-btn font-black text-xs shadow transition active:scale-95 cursor-pointer"
+            className="px-5 py-2 rounded-xl bg-gradient-to-r from-[#19c36e] to-[#00994d] text-white font-black text-xs shadow transition active:scale-95 cursor-pointer"
           >
             {lang === 'bn' ? 'বুঝেছি (Close)' : 'Close'}
           </button>

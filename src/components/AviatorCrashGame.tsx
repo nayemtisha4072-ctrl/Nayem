@@ -266,6 +266,66 @@ function drawAviatorPlane(
   ctx.restore();
 }
 
+function drawExplosionBlast(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  elapsedSec: number
+) {
+  if (elapsedSec < 0 || elapsedSec > 1.35) return;
+  const t = Math.min(1, elapsedSec / 1.35);
+  const alpha = Math.max(0, 1 - t);
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Expanding shockwave ring
+  const shockRadius = 16 + t * 92;
+  ctx.beginPath();
+  ctx.arc(0, 0, shockRadius, 0, Math.PI * 2);
+  ctx.strokeStyle = `rgba(255, 84, 56, ${alpha * 0.85})`;
+  ctx.lineWidth = Math.max(1, 4.5 * (1 - t));
+  ctx.stroke();
+
+  // Secondary orange shock ring
+  if (t > 0.08) {
+    ctx.beginPath();
+    ctx.arc(0, 0, shockRadius * 0.65, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255, 196, 60, ${alpha * 0.7})`;
+    ctx.lineWidth = 2.5 * (1 - t);
+    ctx.stroke();
+  }
+
+  // Fiery glowing core
+  if (elapsedSec < 0.7) {
+    const coreT = elapsedSec / 0.7;
+    const coreR = 26 * (1 - coreT * 0.45) + Math.sin(elapsedSec * 40) * 3;
+    const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, coreR);
+    grad.addColorStop(0, `rgba(255, 250, 200, ${1 - coreT * 0.6})`);
+    grad.addColorStop(0.45, `rgba(255, 130, 20, ${0.9 - coreT * 0.7})`);
+    grad.addColorStop(1, 'rgba(229, 9, 52, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, coreR, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Radial flying sparks
+  const sparkCount = 14;
+  for (let i = 0; i < sparkCount; i++) {
+    const angle = (i * Math.PI * 2) / sparkCount + (i % 2) * 0.2;
+    const dist = 12 + t * (55 + (i % 3) * 26);
+    const sx = Math.cos(angle) * dist;
+    const sy = Math.sin(angle) * dist;
+    ctx.fillStyle = i % 2 === 0 ? `rgba(255, 215, 70, ${alpha})` : `rgba(255, 65, 95, ${alpha})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, Math.max(1.2, 3.6 * (1 - t)), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 export const AviatorCrashGame: React.FC<AviatorCrashGameProps> = ({
   user,
   wallet,
@@ -330,6 +390,9 @@ export const AviatorCrashGame: React.FC<AviatorCrashGameProps> = ({
   phaseRef.current = phase;
   const multRef = useRef<number>(1.0);
   multRef.current = currentMultiplier;
+  const crashPointRef = useRef<number>(1.0);
+  crashPointRef.current = crashPoint ?? currentMultiplier;
+  const lastPlanePosRef = useRef<{ x: number; y: number; angle: number }>({ x: 54, y: 180, angle: -0.05 });
   const takeoffTimeRef = useRef<number>(Date.now());
   const crashAnimStartRef = useRef<number>(0);
   const waitDeadlineRef = useRef<number>(Date.now() + 5500);
@@ -656,6 +719,7 @@ export const AviatorCrashGame: React.FC<AviatorCrashGameProps> = ({
 
           if (p === 'WAITING') {
             // Plane idling at bottom-left launchpad
+            lastPlanePosRef.current = { x: 54, y: h - 22, angle: -0.05 };
             drawAviatorPlane(ctx, 54, h - 22, -0.05, propPhase * 0.6);
           } else if (p === 'FLYING') {
             const elapsedSec = Math.max(0, (Date.now() - takeoffTimeRef.current) / 1000);
@@ -701,13 +765,22 @@ export const AviatorCrashGame: React.FC<AviatorCrashGameProps> = ({
             const tangentAngle = Math.atan2(ty, tx);
             const clampedAngle = Math.max(-0.42, Math.min(0.08, tangentAngle * 0.55));
 
+            lastPlanePosRef.current = { x: targetX - 6, y: targetY - 8, angle: clampedAngle };
             drawAviatorPlane(ctx, targetX - 6, targetY - 8, clampedAngle, propPhase);
           } else if (p === 'CRASHED') {
-            // Plane streaks rapidly out top-right edge on crash
             const crashElapsed = (Date.now() - crashAnimStartRef.current) / 1000;
-            if (crashElapsed < 0.7) {
-              const flyX = w * 0.72 + crashElapsed * w * 0.75;
-              const flyY = h * 0.25 - crashElapsed * h * 0.55;
+            const cp = crashPointRef.current;
+            const isInstantOneX = cp <= 1.01;
+            const blastX = isInstantOneX ? 58 : lastPlanePosRef.current.x;
+            const blastY = isInstantOneX ? h - 26 : lastPlanePosRef.current.y;
+
+            // Render fiery blast explosion at crash coordinate
+            drawExplosionBlast(ctx, blastX, blastY, crashElapsed);
+
+            // If crash happened in flight (> 1.01x), plane also streaks away briefly
+            if (!isInstantOneX && crashElapsed < 0.7) {
+              const flyX = blastX + crashElapsed * w * 0.75;
+              const flyY = blastY - crashElapsed * h * 0.55;
               drawAviatorPlane(ctx, flyX, flyY, -0.35, propPhase);
             }
           }
@@ -1277,9 +1350,11 @@ export const AviatorCrashGame: React.FC<AviatorCrashGameProps> = ({
           {phase === 'CRASHED' && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none space-y-1">
               <div className="text-lg sm:text-2xl font-bold uppercase tracking-wider text-white">
-                FLEW AWAY!
+                {(crashPoint ?? currentMultiplier) <= 1.01
+                  ? (lang === 'bn' ? 'ব্লাস্ট হয়েছে! (INSTANT BLAST)' : 'BLASTED!')
+                  : 'FLEW AWAY!'}
               </div>
-              <div className="text-5xl sm:text-7xl font-black text-[#e50934] tabular-nums tracking-tight drop-shadow-[0_4px_20px_rgba(229,9,52,0.4)]">
+              <div className="text-5xl sm:text-7xl font-black text-[#e50934] tabular-nums tracking-tight drop-shadow-[0_4px_20px_rgba(229,9,52,0.5)]">
                 {(crashPoint ?? currentMultiplier).toFixed(2)}x
               </div>
             </div>

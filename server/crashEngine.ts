@@ -65,26 +65,36 @@ export function computeCrashMultiplier(elapsedMs: number): number {
   return Number(Math.max(1.0, m).toFixed(2));
 }
 
-function generateProvablyFairRound(): {
+export function generateProvablyFairRound(): {
   roundId: string;
   serverSeed: string;
   serverSeedHash: string;
   crashPoint: number;
 } {
+  const cfg = db.crashConfig || { instantCrashPercent: 8, houseEdgePercent: 6, maxMultiplier: 50 };
+  const instantPct = Math.max(1, Math.min(35, Number(cfg.instantCrashPercent) || 8));
+  const houseEdgePct = Math.max(1, Math.min(25, Number(cfg.houseEdgePercent) || 6));
+  const maxMult = Math.max(5, Math.min(200, Number(cfg.maxMultiplier) || 50));
+
   const roundId = `rnd_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`;
   const serverSeed = crypto.randomBytes(32).toString('hex');
   const serverSeedHash = crypto.createHash('sha256').update(serverSeed).digest('hex');
 
   const hmacHex = crypto.createHmac('sha256', serverSeed).update(roundId).digest('hex');
-  const intVal = parseInt(hmacHex.slice(0, 13), 16); // 52-bit integer
+  const h52 = BigInt('0x' + hmacHex.slice(0, 13)); // Exact 52-bit unsigned integer [0, 2^52 - 1]
+  const two52 = 1n << 52n;
 
+  // Instant 1.00x blast probability (e.g. 8% = 800 / 10000)
+  const thresholdBps = BigInt(Math.round(instantPct * 100));
   let crashPoint = 1.0;
-  // ~3% house edge instant crash at 1.00x
-  if (intVal % 33 !== 0) {
-    const e = Math.pow(2, 52);
-    const raw = (100 * e - intVal) / (e - intVal);
-    const adjusted = Math.max(101, Math.floor(raw * 0.97)) / 100;
-    crashPoint = Number(Math.min(200.0, adjusted).toFixed(2));
+
+  if ((h52 % 10000n) >= thresholdBps) {
+    const denom = two52 - h52; // Always >= 1n
+    const rtpBps = BigInt(Math.round((100 - houseEdgePct) * 100)); // e.g. 9400 = 94% RTP
+    const numerator = 100n * two52 * rtpBps;
+    const scaledCenti = Number(numerator / (10000n * denom));
+    const clampedCenti = Math.max(101, Math.min(Math.round(maxMult * 100), scaledCenti));
+    crashPoint = Number((clampedCenti / 100).toFixed(2));
   }
 
   return { roundId, serverSeed, serverSeedHash, crashPoint };

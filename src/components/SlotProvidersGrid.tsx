@@ -1,7 +1,7 @@
 /**
  * Dynamic Slot Providers Grid Component
  * - Renders ONLY providers that actually exist in imported/connected slot games.
- * - Zero hardcoded third-party company names or cards.
+ * - Styled in crisp white & emerald green.
  */
 
 import React, { useMemo } from 'react';
@@ -42,8 +42,8 @@ export const SlotProvidersGrid: React.FC<SlotProvidersGridProps> = ({
     <div className="space-y-4 select-none animate-in fade-in duration-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="w-1.5 h-4 rounded-full bg-[#ff2b88]" />
-          <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
+          <span className="w-1.5 h-4 rounded-full bg-[#00a859]" />
+          <h2 className="text-sm sm:text-base font-black uppercase tracking-wider text-[#182620]">
             SLOTS PROVIDERS
           </h2>
         </div>
@@ -51,7 +51,7 @@ export const SlotProvidersGrid: React.FC<SlotProvidersGridProps> = ({
           <button
             type="button"
             onClick={() => onSelectProvider('all')}
-            className="px-3 py-1 rounded-xl bg-[#520024] hover:bg-[#6e0030] text-amber-300 text-xs font-bold transition cursor-pointer"
+            className="px-3 py-1 rounded-xl bg-[#eaf8f0] hover:bg-[#d8f3e4] text-[#059669] text-xs font-bold transition cursor-pointer"
           >
             সবগুলো দেখুন (View All)
           </button>
@@ -69,19 +69,19 @@ export const SlotProvidersGrid: React.FC<SlotProvidersGridProps> = ({
               onClick={() => onSelectProvider(isSelected ? 'all' : provider.id)}
               className={`flex flex-col items-center justify-center py-5 px-4 rounded-2xl transition-all cursor-pointer transform active:scale-95 border ${
                 isSelected
-                  ? 'bg-[#c20054] border-[#ff4797] shadow-xl shadow-black/50 scale-[1.02] ring-2 ring-amber-400'
-                  : 'bg-[#940040] hover:bg-[#a80048] border-[#cf005c]/70 shadow-md hover:shadow-lg'
+                  ? 'bg-gradient-to-br from-[#19c36e] to-[#00994d] border-[#008f4a] text-white shadow-md scale-[1.02]'
+                  : 'bg-white hover:bg-[#f4fbf7] border-[#dceee3] text-[#182620] shadow-xs hover:shadow-sm'
               }`}
             >
-              <div className="h-9 flex items-center justify-center text-amber-300">
+              <div className={`h-9 flex items-center justify-center ${isSelected ? 'text-white' : 'text-[#059669]'}`}>
                 <Gamepad2 className="w-7 h-7" />
               </div>
 
-              <span className="mt-2 text-xs sm:text-sm font-black text-white tracking-wider flex items-center gap-1">
+              <span className="mt-2 text-xs sm:text-sm font-black tracking-wider flex items-center gap-1">
                 {provider.name}
                 {isSelected && <span className="text-amber-300 text-[10px]">●</span>}
               </span>
-              <span className="text-[10px] text-rose-200/80 font-mono mt-0.5">
+              <span className={`text-[10px] font-mono mt-0.5 ${isSelected ? 'text-emerald-50' : 'text-[#527060]'}`}>
                 {provider.count} Games
               </span>
             </button>
