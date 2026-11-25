@@ -8,11 +8,6 @@ import { Fb88BajiLogo } from './Fb88BajiLogo';
 import { NavTab } from './Sidebar';
 import { PolicySection } from './PolicyModal';
 import {
-  BkashLogo,
-  RocketLogo,
-  NagadLogo,
-  UpayLogo,
-  BankTransferLogo,
   GamCareLogo,
   Age18PlusLogo,
   ResponsibleGamingHandLogo,
@@ -44,21 +39,14 @@ export const Footer: React.FC<FooterProps> = ({
           <h3 className="text-xs sm:text-sm font-black text-white tracking-wide">
             Payment Methods
           </h3>
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 py-1">
-            <div className="flex items-center px-2.5 py-1.5 rounded-lg bg-white shadow-sm border border-emerald-200/40 hover:brightness-105 transition cursor-pointer">
-              <BankTransferLogo size="sm" showText={true} />
-            </div>
-            <div className="flex items-center px-3 py-1.5 rounded-lg bg-[#E2136E] hover:bg-[#c90f61] text-white text-xs font-black shadow-md transition cursor-pointer">
-              <BkashLogo size="sm" showText={true} />
-            </div>
-            <div className="flex items-center px-3 py-1.5 rounded-lg bg-gradient-to-r from-[#F7941D] to-[#ED1C24] hover:opacity-95 text-white text-xs font-black shadow-md transition cursor-pointer">
-              <NagadLogo size="sm" showText={true} />
-            </div>
-            <div className="flex items-center px-3 py-1.5 rounded-lg bg-[#8C3494] hover:bg-[#7a2c82] text-white text-xs font-black shadow-md transition cursor-pointer">
-              <RocketLogo size="sm" showText={true} />
-            </div>
-            <div className="flex items-center px-3 py-1.5 rounded-lg bg-[#004A97] hover:bg-[#003c7a] text-white text-xs font-black shadow-md transition cursor-pointer">
-              <UpayLogo size="sm" showText={true} />
+          <div className="py-1">
+            <div className="w-full max-w-[360px] sm:max-w-[440px] aspect-[1748/284] overflow-hidden rounded-full drop-shadow-md">
+              <img
+                src="/assets/aistudio/file_00000000b8248211b4bac1780c067b7c_2c37e297.png"
+                alt="Payment Methods: bKash, Nagad, Rocket, Upay"
+                className="w-full h-full object-cover object-[50%_45.8%]"
+                loading="lazy"
+              />
             </div>
           </div>
         </div>
